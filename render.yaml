@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: makaziplus-api
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: node server/src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: makaziplus-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: makaziplus-db
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: makaziplus-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: makaziplus-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: makaziplus-db
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        value: https://makaziplus.vercel.app
+
+databases:
+  - name: makaziplus-db
+    databaseName: makaziplus
+    user: makaziplus
+    plan: free
