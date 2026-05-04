@@ -42,18 +42,55 @@ export const formatDate = (dateStr) => {
   });
 };
 
-// ============================================================
-// PROPERTY IMAGE - RETURNS EMPTY (NO IMAGES ANYWHERE)
-// ============================================================
+// CRITICAL FIX: Get property image - correctly handles uploaded images
 export const getPropertyImage = (prop) => {
-  // ALL IMAGES HAVE BEEN DELETED FROM DATABASE
-  // Return empty string - no images will display
-  return '';
+  const getBaseUrl = () => {
+    return process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
+  };
+
+  // FIRST: Check if property has images array from API
+  if (prop?.images && Array.isArray(prop.images) && prop.images.length > 0) {
+    const primaryImg = prop.images.find(img => img.is_primary === 1);
+    const imgToUse = primaryImg || prop.images[0];
+    
+    if (imgToUse && imgToUse.image_url) {
+      // If it's an uploaded image (starts with /uploads), add base URL
+      if (imgToUse.image_url.startsWith('/uploads')) {
+        return `${getBaseUrl()}${imgToUse.image_url}`;
+      }
+      return imgToUse.image_url;
+    }
+  }
+  
+  // SECOND: Check primary_image field
+  if (prop?.primary_image) {
+    if (prop.primary_image.startsWith('/uploads')) {
+      return `${getBaseUrl()}${prop.primary_image}`;
+    }
+    return prop.primary_image;
+  }
+  
+  // THIRD: For debugging - log what we're trying to display
+  console.log('No image found for property:', prop?.id, prop?.title);
+  
+  // FALLBACK: Use property-specific fallback based on ID
+  const fallbacks = [
+    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=75',
+    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=75',
+    'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600&q=75',
+    'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=75',
+    'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=600&q=75',
+    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=75',
+    'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=75',
+    'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=600&q=75',
+    'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=75',
+    'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=600&q=75',
+  ];
+  
+  const index = (prop?.id || 0) % fallbacks.length;
+  return fallbacks[index];
 };
 
-// ============================================================
-// AVATAR IMAGES (Keep for user profiles)
-// ============================================================
 export const AVATAR_IMAGES = [
   'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=120&q=60',
   'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&q=60',
