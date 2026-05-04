@@ -16,6 +16,16 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
   const navigate = useNavigate();
   const img = getPropertyImage(p);
 
+  // No image fallback - show "No Image" placeholder
+  const NoImagePlaceholder = () => (
+    <div className="w-full h-full flex items-center justify-center bg-surface-3">
+      <div className="text-center text-ink-5">
+        <span className="text-3xl">🏠</span>
+        <p className="text-2xs mt-1">No Image</p>
+      </div>
+    </div>
+  );
+
   if (horizontal) {
     return (
       <div onClick={() => navigate(`/property/${p.id}`)}
@@ -23,12 +33,17 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
           border border-surface-4 cursor-pointer mb-2.5 mx-4 md:mx-0"
       >
         <div className="relative w-28 md:w-36 flex-shrink-0 overflow-hidden bg-surface-3">
-          <img src={img} alt={p.title} loading="lazy"
-            className="w-full h-full object-cover min-h-[88px]"
-            onError={(e) => {
-              e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=300&q=60';
-            }}
-          />
+          {img ? (
+            <img src={img} alt={p.title} loading="lazy"
+              className="w-full h-full object-cover min-h-[88px]"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center"><div class="text-center"><span class="text-2xl">🏠</span><p class="text-2xs mt-1">No Image</p></div></div>';
+              }}
+            />
+          ) : (
+            <NoImagePlaceholder />
+          )}
           {p.is_premium === 1 && (
             <div className="absolute bottom-2 left-2 bg-gold text-white text-2xs font-bold px-2 py-0.5 rounded-full">
               ⭐ Prem
@@ -74,12 +89,17 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
         cursor-pointer flex-shrink-0 w-48 md:w-60"
     >
       <div className="relative h-32 md:h-44 overflow-hidden bg-surface-3">
-        <img src={img} alt={p.title} loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-          onError={(e) => {
-            e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=300&q=60';
-          }}
-        />
+        {img ? (
+          <img src={img} alt={p.title} loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center"><div class="text-center"><span class="text-2xl">🏠</span><p class="text-2xs mt-1">No Image</p></div></div>';
+            }}
+          />
+        ) : (
+          <NoImagePlaceholder />
+        )}
         {p.is_premium === 1 && (
           <div className="absolute top-2 left-2 bg-gold text-white text-2xs font-bold px-2.5 py-0.5 rounded-full shadow-gold">
             ⭐ Premium
