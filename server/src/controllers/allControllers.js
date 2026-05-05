@@ -6,7 +6,7 @@ const ALLOWED_PLANS = new Set(['pro', 'owner', 'boost']);
 const ALLOWED_PROP_STATUSES = new Set(['active', 'inactive', 'pending', 'rejected', 'suspended']);
 
 // ============================================================
-// MESSAGES / CHAT (CRITICAL FIX)
+// MESSAGES / CHAT
 // ============================================================
 
 exports.getConversations = async (req, res) => {
@@ -237,7 +237,7 @@ exports.markAllRead = async (req, res) => {
 };
 
 // ============================================================
-// REVIEWS (PROPERTY REVIEWS - FIX)
+// REVIEWS (PROPERTY REVIEWS)
 // ============================================================
 
 exports.createReview = async (req, res) => {
@@ -266,12 +266,6 @@ exports.createReview = async (req, res) => {
     await db.execute(
       'INSERT INTO reviews (user_id, property_id, rating, comment, created_at) VALUES (?, ?, ?, ?, NOW())',
       [req.user.id, propId, safeRating, safeComment]
-    );
-
-    // Update property's average rating
-    const [avgResult] = await db.execute(
-      'SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM reviews WHERE property_id = ?',
-      [propId]
     );
 
     console.log(`⭐ New review for property ${propId}: Rating ${safeRating}`);
@@ -317,7 +311,7 @@ exports.initiatePayment = async (req, res) => {
 
     const pid = r.insertId;
 
-    // Simulate payment completion after 3 seconds (in production, replace with actual M-Pesa API call)
+    // Simulate payment completion after 3 seconds
     setTimeout(async () => {
       try {
         await db.execute('UPDATE payments SET status = ?, completed_at = NOW() WHERE id = ?', ['completed', pid]);
@@ -646,7 +640,7 @@ exports.getTermsOfService = async (req, res) => {
 };
 
 // ============================================================
-// VERIFICATION (DOCUMENT UPLOAD FIX)
+// VERIFICATION (DOCUMENT UPLOAD)
 // ============================================================
 
 exports.submitVerification = async (req, res) => {
@@ -670,7 +664,6 @@ exports.submitVerification = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Nambari ya pasipoti si sahihi' });
     }
     
-    // Handle uploaded files
     let idDocumentFront = null;
     let idDocumentBack = null;
     let selfieUrl = null;
@@ -746,7 +739,19 @@ exports.getAdminStats = async (req, res) => {
     const [views] = await db.execute('SELECT COALESCE(SUM(views), 0) as total FROM properties');
     const [topProps] = await db.execute('SELECT id, title, area, city, views FROM properties ORDER BY views DESC LIMIT 6');
     
-    res.json({ success: true, data: { users: usersCount[0].total, properties: propsCount[0].total, active: activeProps[0].total, revenue: revenue[0].total, views: views[0].total, top_properties: topProps, pending_payments: 0, pending_verifications: 0 } });
+    res.json({
+      success: true,
+      data: {
+        users: usersCount[0].total,
+        properties: propsCount[0].total,
+        active: activeProps[0].total,
+        revenue: revenue[0].total,
+        views: views[0].total,
+        top_properties: topProps,
+        pending_payments: 0,
+        pending_verifications: 0
+      }
+    });
   } catch (error) {
     console.error('getAdminStats error:', error.message);
     res.status(500).json({ success: false, message: error.message });
