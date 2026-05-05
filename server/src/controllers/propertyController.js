@@ -65,7 +65,6 @@ exports.getProperties = async (req, res) => {
 
     const [rows] = await db.execute(query, vals);
 
-    // Fetch images for each property
     for (let i = 0; i < rows.length; i++) {
       const [images] = await db.execute(
         'SELECT id, image_url, is_primary, sort_order FROM property_images WHERE property_id = ? ORDER BY sort_order',
@@ -89,7 +88,7 @@ exports.getProperties = async (req, res) => {
 };
 
 // ============================================================
-// GET SINGLE PROPERTY (with images, amenities, reviews)
+// GET SINGLE PROPERTY
 // ============================================================
 exports.getProperty = async (req, res) => {
   try {
@@ -140,7 +139,7 @@ exports.getProperty = async (req, res) => {
 };
 
 // ============================================================
-// GET MY PROPERTIES (for owner/dalali dashboard)
+// GET MY PROPERTIES
 // ============================================================
 exports.getMyProperties = async (req, res) => {
   try {
@@ -160,7 +159,7 @@ exports.getMyProperties = async (req, res) => {
 };
 
 // ============================================================
-// CREATE PROPERTY (WITH IMAGE UPLOAD)
+// CREATE PROPERTY
 // ============================================================
 exports.createProperty = async (req, res) => {
   try {
@@ -245,24 +244,37 @@ exports.createProperty = async (req, res) => {
 };
 
 // ============================================================
-// UPDATE PROPERTY (WITH FIXED IMAGE HANDLING)
+// UPDATE PROPERTY (WITH DEBUGGING)
 // ============================================================
 exports.updateProperty = async (req, res) => {
+  // DEBUGGING: Log the incoming request
+  console.log('🔍 UPDATE REQUEST RECEIVED');
+  console.log('🔍 Property ID:', req.params.id);
+  console.log('🔍 Request body keys:', Object.keys(req.body || {}));
+  console.log('🔍 Files received:', req.files ? req.files.length : 0);
+  
   try {
     const id = parseInt(req.params.id);
     if (!id || isNaN(id)) {
       return res.status(400).json({ success: false, message: 'ID si sahihi' });
     }
 
+    // FIRST: Check if property exists
     const [rows] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
     if (!rows.length) {
+      console.log(`❌ Property ${id} not found`);
       return res.status(404).json({ success: false, message: 'Mali haipatikani' });
     }
+
+    console.log(`✅ Property ${id} found, owner: ${rows[0].owner_id}, current user: ${req.user.id}`);
+
+    // SECOND: Check authorization
     if (rows[0].owner_id !== req.user.id && req.user.role !== 'admin') {
+      console.log(`❌ Unauthorized: User ${req.user.id} trying to edit property ${id}`);
       return res.status(403).json({ success: false, message: 'Huna ruhusa' });
     }
 
-    // Update property basic info
+    // THIRD: Update property fields
     const sets = [];
     const vals = [];
     for (const field of ALLOWED_UPDATE_FIELDS) {
@@ -273,6 +285,7 @@ exports.updateProperty = async (req, res) => {
         if (field === 'price' && isNaN(parseFloat(req.body[field]))) continue;
         sets.push(`${field} = ?`);
         vals.push(req.body[field]);
+        console.log(`📝 Updating field ${field} to:`, req.body[field]);
       }
     }
 
@@ -283,10 +296,13 @@ exports.updateProperty = async (req, res) => {
 
     if (sets.length > 0) {
       vals.push(id);
+      console.log(`📝 Executing UPDATE with ${sets.length} fields`);
       await db.execute(`UPDATE properties SET ${sets.join(', ')} WHERE id = ?`, vals);
+    } else {
+      console.log(`📝 No field updates, only image changes`);
     }
 
-    // Add new images
+    // FOURTH: Save new uploaded images
     if (req.files && req.files.length > 0) {
       console.log(`📸 Adding ${req.files.length} new images for property ${id}`);
       const [existingImages] = await db.execute(
@@ -306,7 +322,7 @@ exports.updateProperty = async (req, res) => {
       }
     }
 
-    // CRITICAL FIX: Only remove images if remove_images exists and is an array
+    // FIFTH: Handle removal of images
     if (req.body.remove_images) {
       try {
         const toRemove = typeof req.body.remove_images === 'string' 
@@ -314,21 +330,23 @@ exports.updateProperty = async (req, res) => {
           : req.body.remove_images;
         
         if (Array.isArray(toRemove) && toRemove.length > 0) {
+          console.log(`🗑️ Removing ${toRemove.length} images`);
           for (const imgId of toRemove) {
             await db.execute('DELETE FROM property_images WHERE id = ? AND property_id = ?', [imgId, id]);
-            console.log(`🗑️ Removed image ID: ${imgId}`);
+            console.log(`   Removed image ID: ${imgId}`);
           }
         }
       } catch (parseErr) {
         console.error('Error parsing remove_images:', parseErr.message);
-        // Continue without removing images
       }
     }
 
     const [updated] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
+    console.log(`✅ Update completed for property ${id}`);
     res.json({ success: true, data: updated[0], message: 'Tangazo limesasishwa!' });
   } catch (e) {
     console.error('updateProperty error:', e.message);
+    console.error('Stack:', e.stack);
     res.status(500).json({ success: false, message: 'Hitilafu ya seva', error: e.message });
   }
 };
@@ -360,7 +378,7 @@ exports.deleteProperty = async (req, res) => {
 };
 
 // ============================================================
-// BOOST PROPERTY (Make Premium)
+// BOOST PROPERTY
 // ============================================================
 exports.boostProperty = async (req, res) => {
   try {
@@ -386,7 +404,7 @@ exports.boostProperty = async (req, res) => {
 };
 
 // ============================================================
-// UPDATE PROPERTY STATUS (available/sold/rented/pending)
+// UPDATE PROPERTY STATUS
 // ============================================================
 exports.updatePropertyStatus = async (req, res) => {
   try {

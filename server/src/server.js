@@ -44,34 +44,22 @@ io.on('connection', (socket) => {
   const uid = socket.userId;
   console.log(`✅ User ${uid} connected to Socket.IO`);
   
-  // Join user's personal room
   socket.join(`user_${uid}`);
-  
-  // Emit connection confirmation
-  socket.emit('connected', { 
-    message: 'Connected to MakaziPlus chat server', 
-    userId: uid 
-  });
+  socket.emit('connected', { message: 'Connected to MakaziPlus chat server', userId: uid });
 
-  // ============================================================
-  // SEND MESSAGE
-  // ============================================================
   socket.on('send_message', async (data) => {
     try {
       const { to_user_id, message, property_id } = data;
       const toId = parseInt(to_user_id);
       
-      // Validation
       if (!toId || isNaN(toId) || toId === uid) {
         socket.emit('error', { message: 'Invalid recipient' });
         return;
       }
-      
       if (!message || String(message).trim().length === 0) {
         socket.emit('error', { message: 'Message cannot be empty' });
         return;
       }
-      
       if (String(message).trim().length > 5000) {
         socket.emit('error', { message: 'Message too long (max 5000 characters)' });
         return;
@@ -80,14 +68,12 @@ io.on('connection', (socket) => {
       const safePropId = property_id ? parseInt(property_id) : null;
       const trimmedMessage = String(message).trim();
       
-      // Save message to database
       const [result] = await db.execute(
         `INSERT INTO messages (from_user_id, to_user_id, property_id, message, is_read, created_at)
          VALUES (?, ?, ?, ?, 0, NOW())`,
         [uid, toId, safePropId, trimmedMessage]
       );
       
-      // Fetch the complete message with sender info
       const [msgRows] = await db.execute(
         `SELECT m.*, u.name AS from_name, u.avatar AS from_avatar
          FROM messages m
@@ -97,21 +83,15 @@ io.on('connection', (socket) => {
       );
       
       const newMessage = msgRows[0];
-      
-      // Send to recipient in real-time
       io.to(`user_${toId}`).emit('new_message', newMessage);
-      
-      // Confirm to sender
       socket.emit('message_sent', newMessage);
       
-      // Create notification for recipient
       await db.execute(
         `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
          VALUES (?, ?, ?, ?, ?, ?, NOW())`,
         [toId, 'Ujumbe Mpya 💬', `Umepewa ujumbe mpya kutoka kwa mtumiaji`, 'message', result.insertId, 'message']
       );
       
-      // Send real-time notification
       io.to(`user_${toId}`).emit('notification', {
         type: 'message',
         title: 'Ujumbe Mpya',
@@ -120,16 +100,12 @@ io.on('connection', (socket) => {
       });
       
       console.log(`📨 Message ${result.insertId}: User ${uid} -> User ${toId}`);
-      
     } catch (err) {
       console.error('Socket send_message error:', err.message);
       socket.emit('error', { message: 'Ujumbe haukutumwa: ' + err.message });
     }
   });
 
-  // ============================================================
-  // TYPING INDICATOR
-  // ============================================================
   socket.on('typing', ({ to_user_id }) => {
     const toId = parseInt(to_user_id);
     if (toId && !isNaN(toId) && toId !== uid) {
@@ -144,9 +120,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ============================================================
-  // MARK MESSAGES AS READ
-  // ============================================================
   socket.on('mark_read', async ({ from_user_id }) => {
     try {
       const fromId = parseInt(from_user_id);
@@ -164,9 +137,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ============================================================
-  // DISCONNECT
-  // ============================================================
   socket.on('disconnect', () => {
     console.log(`❌ User ${uid} disconnected from Socket.IO`);
   });
@@ -186,7 +156,6 @@ try {
   console.warn('⚠️ Run: cd server && npm install helmet');
 }
 
-// Trust proxy (for correct IP behind Render/Nginx)
 app.set('trust proxy', 1);
 
 // ============================================================
@@ -206,7 +175,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================================
-// STATIC FILES FOR UPLOADS (CRITICAL)
+// STATIC FILES FOR UPLOADS (CRITICAL FIX)
 // ============================================================
 const fs = require('fs');
 const uploadsDir = path.join(__dirname, '../uploads');
@@ -225,7 +194,7 @@ console.log(`   📁 Uploads: ${uploadsDir}`);
 console.log(`   📁 Properties: ${propertiesDir}`);
 console.log(`   📁 Avatars: ${avatarsDir}`);
 
-// Serve uploaded files with proper CORS headers
+// CRITICAL FIX: Serve static files from the correct absolute path
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -235,6 +204,7 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(uploadsDir));
 
 console.log(`✅ Static uploads serving enabled at: /uploads`);
+console.log(`✅ Serving static files from: ${uploadsDir}`);
 
 // ============================================================
 // IP BLOCK MIDDLEWARE
