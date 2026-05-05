@@ -160,7 +160,7 @@ exports.getMyProperties = async (req, res) => {
 };
 
 // ============================================================
-// CREATE PROPERTY (WITH IMAGE UPLOAD - CRITICAL FIX)
+// CREATE PROPERTY (WITH IMAGE UPLOAD)
 // ============================================================
 exports.createProperty = async (req, res) => {
   try {
@@ -213,7 +213,7 @@ exports.createProperty = async (req, res) => {
     const pid = r.insertId;
     console.log(`📝 Created property ID: ${pid}`);
 
-    // CRITICAL FIX: Save uploaded images
+    // Save uploaded images
     if (req.files && req.files.length > 0) {
       console.log(`📸 Saving ${req.files.length} images for property ${pid}`);
       for (let i = 0; i < req.files.length; i++) {
@@ -249,7 +249,7 @@ exports.createProperty = async (req, res) => {
 };
 
 // ============================================================
-// UPDATE PROPERTY (WITH IMAGE UPLOAD - CRITICAL FIX)
+// UPDATE PROPERTY (WITH IMAGE UPLOAD - FIXED)
 // ============================================================
 exports.updateProperty = async (req, res) => {
   try {
@@ -258,15 +258,18 @@ exports.updateProperty = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ID si sahihi' });
     }
 
+    // FIRST: Check if property exists
     const [rows] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
     if (!rows.length) {
       return res.status(404).json({ success: false, message: 'Mali haipatikani' });
     }
+
+    // SECOND: Check authorization
     if (rows[0].owner_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Huna ruhusa' });
     }
 
-    // Update property fields
+    // THIRD: Update property fields
     const sets = [];
     const vals = [];
     for (const field of ALLOWED_UPDATE_FIELDS) {
@@ -290,7 +293,7 @@ exports.updateProperty = async (req, res) => {
       await db.execute(`UPDATE properties SET ${sets.join(', ')} WHERE id = ?`, vals);
     }
 
-    // CRITICAL FIX: Save new uploaded images (append, not replace)
+    // FOURTH: Save new uploaded images (append, not replace)
     if (req.files && req.files.length > 0) {
       console.log(`📸 Adding ${req.files.length} new images for property ${id}`);
       
@@ -312,7 +315,7 @@ exports.updateProperty = async (req, res) => {
       }
     }
 
-    // Handle removal of images if specified
+    // FIFTH: Handle removal of images if specified
     if (req.body.remove_images) {
       const toRemove = JSON.parse(req.body.remove_images);
       for (const imgId of toRemove) {
