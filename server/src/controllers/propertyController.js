@@ -166,7 +166,6 @@ exports.createProperty = async (req, res) => {
   try {
     const { title, description, type, price, price_type, city, area, address, bedrooms, bathrooms, size_sqm, amenities } = req.body;
 
-    // Validation
     if (!title || !description || !type || !price || !city || !area) {
       return res.status(400).json({ success: false, message: 'Jaza sehemu zote muhimu' });
     }
@@ -185,7 +184,6 @@ exports.createProperty = async (req, res) => {
     const placeId = req.body.place_id || null;
     const formattedAddress = req.body.formatted_address || address || null;
 
-    // Insert property
     const [r] = await db.execute(`
       INSERT INTO properties 
       (owner_id, title, description, type, price, price_type, city, area, address, bedrooms, bathrooms, size_sqm, 
@@ -213,7 +211,6 @@ exports.createProperty = async (req, res) => {
     const pid = r.insertId;
     console.log(`📝 Created property ID: ${pid}`);
 
-    // Save uploaded images
     if (req.files && req.files.length > 0) {
       console.log(`📸 Saving ${req.files.length} images for property ${pid}`);
       for (let i = 0; i < req.files.length; i++) {
@@ -229,7 +226,6 @@ exports.createProperty = async (req, res) => {
       console.log(`⚠️ No images uploaded for property ${pid}`);
     }
 
-    // Save amenities
     if (amenities) {
       const list = Array.isArray(amenities) ? amenities : JSON.parse(amenities);
       for (const a of list.slice(0, 20)) {
@@ -249,7 +245,7 @@ exports.createProperty = async (req, res) => {
 };
 
 // ============================================================
-// UPDATE PROPERTY (WITH IMAGE UPLOAD - FIXED)
+// UPDATE PROPERTY (WITH FIXED IMAGE HANDLING)
 // ============================================================
 exports.updateProperty = async (req, res) => {
   try {
@@ -258,18 +254,15 @@ exports.updateProperty = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ID si sahihi' });
     }
 
-    // FIRST: Check if property exists
     const [rows] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
     if (!rows.length) {
       return res.status(404).json({ success: false, message: 'Mali haipatikani' });
     }
-
-    // SECOND: Check authorization
     if (rows[0].owner_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Huna ruhusa' });
     }
 
-    // THIRD: Update property fields
+    // Update property basic info
     const sets = [];
     const vals = [];
     for (const field of ALLOWED_UPDATE_FIELDS) {
@@ -293,11 +286,9 @@ exports.updateProperty = async (req, res) => {
       await db.execute(`UPDATE properties SET ${sets.join(', ')} WHERE id = ?`, vals);
     }
 
-    // FOURTH: Save new uploaded images (append, not replace)
+    // Add new images
     if (req.files && req.files.length > 0) {
       console.log(`📸 Adding ${req.files.length} new images for property ${id}`);
-      
-      // Get current max sort_order
       const [existingImages] = await db.execute(
         'SELECT MAX(sort_order) as max_order FROM property_images WHERE property_id = ?',
         [id]
@@ -315,12 +306,22 @@ exports.updateProperty = async (req, res) => {
       }
     }
 
-    // FIFTH: Handle removal of images if specified
+    // CRITICAL FIX: Only remove images if remove_images exists and is an array
     if (req.body.remove_images) {
-      const toRemove = JSON.parse(req.body.remove_images);
-      for (const imgId of toRemove) {
-        await db.execute('DELETE FROM property_images WHERE id = ? AND property_id = ?', [imgId, id]);
-        console.log(`🗑️ Removed image ID: ${imgId}`);
+      try {
+        const toRemove = typeof req.body.remove_images === 'string' 
+          ? JSON.parse(req.body.remove_images) 
+          : req.body.remove_images;
+        
+        if (Array.isArray(toRemove) && toRemove.length > 0) {
+          for (const imgId of toRemove) {
+            await db.execute('DELETE FROM property_images WHERE id = ? AND property_id = ?', [imgId, id]);
+            console.log(`🗑️ Removed image ID: ${imgId}`);
+          }
+        }
+      } catch (parseErr) {
+        console.error('Error parsing remove_images:', parseErr.message);
+        // Continue without removing images
       }
     }
 
