@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useLanguage } from '../context/LanguageContext';
 import { TopBar } from '../components/layout/TopBar';
 import { PaymentModal, Spinner } from '../components/common/Spinner';
 import { ROLE_LABELS, getAvatar } from '../utils/helpers';
@@ -11,6 +12,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
   const { toast } = useToast();
+  const { language, changeLanguage, t } = useLanguage();
 
   // State for edit profile modal
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -47,7 +49,7 @@ export default function Profile() {
 
   const [payOpen, setPayOpen] = useState(false);
 
-  // Load verification status - MUST be before conditional return
+  // Load verification status
   useEffect(() => {
     if (!user) return;
     const loadVerification = async () => {
@@ -61,21 +63,24 @@ export default function Profile() {
     loadVerification();
   }, [user]);
 
-  // Load user settings - MUST be before conditional return
+  // Load user settings
   useEffect(() => {
     if (!user) return;
     const loadSettings = async () => {
       try {
         const r = await api.get('/settings');
         setSettings(r.data.data);
+        // Sync language from backend
+        if (r.data.data?.language && ['sw', 'en'].includes(r.data.data.language)) {
+          changeLanguage(r.data.data.language);
+        }
       } catch (err) {
         console.error('Load settings error:', err);
       }
     };
     loadSettings();
-  }, [user]);
+  }, [user, changeLanguage]);
 
-  // If no user, redirect (after hooks)
   if (!user) {
     navigate('/auth');
     return null;
@@ -88,7 +93,7 @@ export default function Profile() {
     { icon: '📊', label: 'Dashibodi', sub: 'Analytics na matangazo yako', path: '/dashboard', show: true },
     { icon: '❤️', label: 'Zilizohifadhiwa', sub: 'Mali uliyopenda', path: '/favorites', show: true },
     { icon: '➕', label: 'Ongeza Mali', sub: 'Chapisha tangazo jipya', path: '/add', show: true },
-    { icon: '⭐', label: 'Upgradi Akaunti', sub: 'Pro --- TSh 30,000/mwezi', path: '/subscription', show: true },
+    { icon: '⭐', label: 'Upgradi Akaunti', sub: 'Pro -- TSh 30,000/mwezi', path: '/subscription', show: true },
     { icon: '📅', label: 'Bookings Zangu', sub: 'Angalia na udhibiti bookings zako', path: '/bookings', show: true },
     { icon: '🔔', label: 'Arifa', sub: 'Tazama arifa zako zote', path: '/notifications', show: true },
     { icon: '🛡️', label: 'Admin Panel', sub: 'Simamia mfumo wote', path: '/admin', show: user.role === 'admin' },
@@ -130,7 +135,6 @@ export default function Profile() {
       formData.append('name', editName.trim());
       if (editPhone) formData.append('phone', editPhone.trim());
       if (editAvatar) formData.append('avatar', editAvatar);
-
       const r = await api.patch('/auth/update-profile', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -170,6 +174,7 @@ export default function Profile() {
       toast('Nambari ya leseni si sahihi', 'error');
       return;
     }
+
     setSubmittingVerification(true);
     try {
       await api.post('/verification/submit', { id_type: idType, id_number: idNumber });
@@ -184,7 +189,7 @@ export default function Profile() {
     }
   };
 
-  // ─── SETTINGS (Notifications ON/OFF) ─────────────────────────────
+  // ─── SETTINGS (Notifications ON/OFF + LANGUAGE TOGGLE) ─────────────
   const openSettingsModal = async () => {
     try {
       const r = await api.get('/settings');
@@ -199,6 +204,10 @@ export default function Profile() {
     setUpdatingSettings(true);
     try {
       await api.patch('/settings', settings);
+      // Sync language change
+      if (settings.language && ['sw', 'en'].includes(settings.language)) {
+        changeLanguage(settings.language);
+      }
       toast('Mipangilio imehifadhiwa! ✅', 'success');
       setSettingsModalOpen(false);
     } catch (e) {
@@ -222,6 +231,7 @@ export default function Profile() {
       toast('Nywila mpya hazifanani', 'error');
       return;
     }
+
     setChangingPassword(true);
     try {
       await api.patch('/auth/change-password', {
@@ -298,7 +308,6 @@ export default function Profile() {
         <div className="font-serif text-xl font-semibold text-ink">{user.name}</div>
         <div className="text-xs text-ink-4 mt-0.5">{user.email}</div>
         {user.phone && <div className="text-xs text-ink-4 mt-0.5">{user.phone}</div>}
-
         <div className="flex gap-2 mt-2.5 flex-wrap">
           <span className="bg-primary-pale text-primary text-2xs font-bold px-2.5 py-1 rounded-full">
             {ROLE_LABELS[user.role] || '👤 Mteja'}
@@ -310,7 +319,6 @@ export default function Profile() {
             {verificationBadge.icon} {verificationBadge.text}
           </span>
         </div>
-
         {!user.verified && !user.is_verified && verificationStatus?.status !== 'pending' && (
           <button
             onClick={openVerificationModal}
@@ -326,7 +334,6 @@ export default function Profile() {
         <div className="text-2xs font-bold text-ink-4 uppercase tracking-widest mb-2 pl-1">
           Akaunti
         </div>
-
         <div className="bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4">
           {MENU.filter(m => m.show).map((m, i, arr) => (
             <button
@@ -406,17 +413,14 @@ export default function Profile() {
                   <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
                 </label>
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-ink-4 mb-1.5">Jina Kamili</label>
                 <input value={editName} onChange={(e) => setEditName(e.target.value)} className="input-field" />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-ink-4 mb-1.5">Nambari ya Simu</label>
                 <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+255 XXX XXX XXX" className="input-field" />
               </div>
-
               <button onClick={handleUpdateProfile} disabled={updatingProfile} className="btn-primary">
                 {updatingProfile ? <><Spinner size="sm" color="white" /> Inahifadhi...</> : 'Hifadhi Mabadiliko'}
               </button>
@@ -441,7 +445,6 @@ export default function Profile() {
               <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700">
                 <span className="font-bold">ℹ️</span> Tunahitaji kuthibitisha utambulisho wako kwa usalama wa platform yetu.
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-ink-4 mb-1.5">Aina ya Kitambulisho</label>
                 <select value={idType} onChange={(e) => setIdType(e.target.value)} className="input-field">
@@ -451,7 +454,6 @@ export default function Profile() {
                   <option value="tin">TIN (Kodi)</option>
                 </select>
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-ink-4 mb-1.5">
                   Namba ya Kitambulisho
@@ -465,7 +467,6 @@ export default function Profile() {
                   maxLength={idType === 'nida' ? 20 : 50}
                 />
               </div>
-
               <button onClick={handleSubmitVerification} disabled={submittingVerification} className="btn-primary">
                 {submittingVerification ? <><Spinner size="sm" color="white" /> Inatuma...</> : 'Tuma Ombi la Uthibitisho'}
               </button>
@@ -474,7 +475,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ─── SETTINGS MODAL ─── */}
+      {/* ─── SETTINGS MODAL WITH LANGUAGE TOGGLE ─── */}
       {settingsModalOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center p-4"
@@ -487,6 +488,30 @@ export default function Profile() {
               <button onClick={() => setSettingsModalOpen(false)} className="w-8 h-8 bg-surface rounded-full flex items-center justify-center">✕</button>
             </div>
             <div className="p-5 space-y-4">
+              {/* Language Toggle Section */}
+              <div className="border-b border-surface-4 pb-3">
+                <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-2">Lugha / Language</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, language: 'sw' })}
+                    className={`py-3 rounded-xl text-sm font-semibold transition-all active:scale-95
+                      ${settings.language === 'sw' ? 'bg-primary text-white shadow-green' : 'bg-surface text-ink-4 border border-surface-4'}`}
+                  >
+                    🇹🇿 Kiswahili
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, language: 'en' })}
+                    className={`py-3 rounded-xl text-sm font-semibold transition-all active:scale-95
+                      ${settings.language === 'en' ? 'bg-primary text-white shadow-green' : 'bg-surface text-ink-4 border border-surface-4'}`}
+                  >
+                    🇬🇧 English
+                  </button>
+                </div>
+              </div>
+
+              {/* Notifications Section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-2">
                   <div>
@@ -538,10 +563,10 @@ export default function Profile() {
               </div>
 
               <div className="pt-3 border-t border-surface-4">
-                <label className="block text-xs font-bold text-ink-4 mb-1.5">Lugha</label>
-                <select value={settings.language} onChange={(e) => setSettings({ ...settings, language: e.target.value })} className="input-field">
-                  <option value="sw">Kiswahili</option>
-                  <option value="en">English</option>
+                <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Mandhari</label>
+                <select value={settings.theme} onChange={(e) => setSettings({ ...settings, theme: e.target.value })} className="input-field">
+                  <option value="light">Mwangaza</option>
+                  <option value="dark">Giza</option>
                 </select>
               </div>
 
@@ -568,41 +593,19 @@ export default function Profile() {
             <div className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-ink-4 mb-1.5">Nywila ya Sasa</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="input-field"
-                />
+                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" className="input-field" />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-ink-4 mb-1.5">Nywila Mpya</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Angalau herufi 8"
-                  className="input-field"
-                />
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Angalau herufi 8" className="input-field" />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-ink-4 mb-1.5">Thibitisha Nywila Mpya</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Rudia nywila mpya"
-                  className="input-field"
-                />
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Rudia nywila mpya" className="input-field" />
               </div>
-
               {newPassword && confirmPassword && newPassword !== confirmPassword && (
                 <p className="text-xs text-red-500">⚠️ Nywila hazifanani</p>
               )}
-
               <button onClick={handleChangePassword} disabled={changingPassword} className="btn-primary">
                 {changingPassword ? <><Spinner size="sm" color="white" /> Inabadilisha...</> : 'Badilisha Nywila'}
               </button>

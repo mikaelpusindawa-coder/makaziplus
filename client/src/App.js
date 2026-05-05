@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { BottomNav, DesktopSidebar } from './components/layout/BottomNav';
 import { Spinner } from './components/common/Spinner';
 
@@ -33,34 +34,27 @@ const LoadScreen = () => (
   </div>
 );
 
-     // Auth Guard Component
+// Auth Guard Component
 const Guard = ({ children, adminOnly }) => {
   const { user, loading } = useAuth();
-
   if (loading) return <LoadScreen />;
   if (!user) return <Navigate to="/auth" replace />;
   if (adminOnly && user.role !== 'admin') return <Navigate to="/" replace />;
-
   return children;
 };
 
 // Guest Guard (redirects to home if already logged in)
 const GuestGuard = ({ children }) => {
   const { user, loading } = useAuth();
-
   if (loading) return <LoadScreen />;
   if (user) return <Navigate to="/" replace />;
-
   return children;
 };
-
 
 // Responsive layout wrapper
 const Shell = ({ children }) => {
   const { user, loading } = useAuth();
-
   if (loading) return <LoadScreen />;
-
   return (
     <div className={user ? 'md:flex md:min-h-screen' : ''}>
       {user && <DesktopSidebar />}
@@ -68,7 +62,7 @@ const Shell = ({ children }) => {
         <div className={user ? 'max-w-lg mx-auto md:max-w-none md:mx-0' : 'max-w-lg mx-auto'}>
           {children}
         </div>
-        {user && <BottomNav />}       
+        {user && <BottomNav />}
       </div>
     </div>
   );
@@ -84,11 +78,11 @@ function AppRoutes() {
       <Route path="/help" element={<Shell><HelpCenter /></Shell>} />
       <Route path="/privacy" element={<Shell><HelpCenter /></Shell>} />
       <Route path="/terms" element={<Shell><HelpCenter /></Shell>} />
-      
+
       {/* Auth Routes - Guest Only */}
       <Route path="/auth" element={<GuestGuard><Auth /></GuestGuard>} />
       <Route path="/forgot-password" element={<GuestGuard><ForgotPassword /></GuestGuard>} />
-      
+
       {/* Protected Routes - Auth Required */}
       <Route path="/chat" element={<Shell><Guard><Chat /></Guard></Shell>} />
       <Route path="/add" element={<Shell><Guard><AddProperty /></Guard></Shell>} />
@@ -99,10 +93,10 @@ function AppRoutes() {
       <Route path="/subscription" element={<Shell><Guard><Subscription /></Guard></Shell>} />
       <Route path="/verification" element={<Shell><Guard><Verification /></Guard></Shell>} />
       <Route path="/bookings" element={<Shell><Guard><Bookings /></Guard></Shell>} />
-      
+
       {/* Admin Only Routes */}
       <Route path="/admin" element={<Shell><Guard adminOnly><Admin /></Guard></Shell>} />
-      
+
       {/* 404 Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -114,7 +108,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <AppRoutes />
+          <LanguageProvider>
+            <AppRoutes />
+          </LanguageProvider>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -11,6 +11,7 @@ client/.env
 # Build outputs
 client/build/
 dist/
+Production_URLs.txt/
 
 # Uploaded files — don't commit user uploads
 server/uploads/*

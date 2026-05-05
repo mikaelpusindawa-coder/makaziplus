@@ -31,6 +31,14 @@ export const RatingModal = ({
     return texts[rating] || '';
   };
 
+  const getRoleDisplay = () => {
+    if (userRole === 'agent') return { icon: '🧑‍💼', label: 'Dalali', desc: 'Tathmini huduma ya dalali huyu' };
+    if (userRole === 'owner') return { icon: '🏠', label: 'Mwenye Nyumba', desc: 'Tathmini uaminifu na huduma ya mwenye nyumba' };
+    return { icon: '🏠', label: 'Mali', desc: 'Tathmini ubora wa mali hii' };
+  };
+
+  const roleDisplay = getRoleDisplay();
+
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center p-4"
@@ -44,18 +52,17 @@ export const RatingModal = ({
             ✕
           </button>
         </div>
-
         <div className="p-5">
           <div className="text-center mb-4">
             <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">
-              {userRole === 'agent' ? '🧑‍💼' : '🏠'}
+              {roleDisplay.icon}
             </div>
             <p className="text-sm font-semibold text-ink">{userName}</p>
-            <p className="text-xs text-ink-5 capitalize">{userRole === 'agent' ? 'Dalali' : 'Mwenye Nyumba'}</p>
+            <p className="text-xs text-ink-5 capitalize">{roleDisplay.label}</p>
+            <p className="text-xs text-ink-6 mt-1">{roleDisplay.desc}</p>
           </div>
-
           <p className="text-sm text-ink-5 mb-4 text-center">
-            Je, ulikuwa na furaha na huduma yake?
+            Je, ulikuwa na furaha na {roleDisplay.label === 'Mali' ? 'mali hii' : 'huduma yake'}?
           </p>
 
           <div className="flex justify-center mb-4">

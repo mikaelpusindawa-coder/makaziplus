@@ -20,13 +20,19 @@ export default function PropertyDetail() {
   const [mainImg, setMainImg] = useState('');
   const [imgIdx, setImgIdx] = useState(0);
   const [payOpen, setPayOpen] = useState(false);
-  
-  // Rating modal states
+
+  // Property review states
+  const [showPropertyReviewModal, setShowPropertyReviewModal] = useState(false);
+  const [propertyStarValue, setPropertyStarValue] = useState(0);
+  const [propertyReviewText, setPropertyReviewText] = useState('');
+  const [submittingPropertyReview, setSubmittingPropertyReview] = useState(false);
+
+  // Owner rating modal states
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [starValue, setStarValue] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
-  
+
   // Booking modal states
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingDetails, setBookingDetails] = useState({
@@ -36,7 +42,7 @@ export default function PropertyDetail() {
     special_requests: ''
   });
   const [bookingLoading, setBookingLoading] = useState(false);
-  
+
   // Owner rating states
   const [ownerRating, setOwnerRating] = useState(null);
   const [ownerReviews, setOwnerReviews] = useState([]);
@@ -58,8 +64,9 @@ export default function PropertyDetail() {
       } catch (err) {
         console.error('Load property error:', err);
         navigate('/');
+      } finally {
+        setLoading(false);
       }
-      finally { setLoading(false); }
     };
     load();
   }, [id, user, navigate]);
@@ -96,9 +103,42 @@ export default function PropertyDetail() {
     navigate(`/chat?userId=${property.owner_id}`);
   };
 
+  // ============================================================
+  // SUBMIT PROPERTY REVIEW (FIX)
+  // ============================================================
+  const handleSubmitPropertyReview = async () => {
+    if (!user) { navigate('/auth'); return; }
+    if (!propertyStarValue) { toast('Chagua rating ya nyota', 'error'); return; }
+
+    setSubmittingPropertyReview(true);
+    try {
+      await api.post('/reviews', {
+        property_id: parseInt(id),
+        rating: propertyStarValue,
+        comment: propertyReviewText.trim() || null
+      });
+      toast('Asante kwa maoni yako! ⭐', 'success');
+      setShowPropertyReviewModal(false);
+      setPropertyStarValue(0);
+      setPropertyReviewText('');
+
+      // Refresh property to show new review
+      const r = await api.get(`/properties/${id}`);
+      setProperty(r.data.data);
+    } catch (e) {
+      toast(e.response?.data?.message || 'Hitilafu wakati wa kutuma maoni', 'error');
+    } finally {
+      setSubmittingPropertyReview(false);
+    }
+  };
+
+  // ============================================================
+  // SUBMIT OWNER RATING
+  // ============================================================
   const handleSubmitRating = async () => {
     if (!user) { navigate('/auth'); return; }
     if (!starValue) { toast('Chagua rating ya nyota', 'error'); return; }
+
     setSubmittingRating(true);
     try {
       await api.post('/ratings/user', {
@@ -110,27 +150,35 @@ export default function PropertyDetail() {
       setShowRatingModal(false);
       setStarValue(0);
       setReviewText('');
+
       // Refresh owner ratings
       const r = await api.get(`/ratings/user/${property.owner_id}`);
       setOwnerRating(r.data.avg_rating);
       setOwnerReviews(r.data.data || []);
     } catch (e) {
       toast(e.response?.data?.message || 'Hitilafu wakati wa kutuma tathmini', 'error');
-    } finally { setSubmittingRating(false); }
+    } finally {
+      setSubmittingRating(false);
+    }
   };
 
+  // ============================================================
+  // BOOKING HANDLER
+  // ============================================================
   const handleBooking = async () => {
     if (!user) { navigate('/auth'); return; }
     if (!bookingDetails.check_in || !bookingDetails.check_out) {
       toast('Chagua tarehe za kuingia na kutoka', 'error');
       return;
     }
+
     const checkIn = new Date(bookingDetails.check_in);
     const checkOut = new Date(bookingDetails.check_out);
     if (checkOut <= checkIn) {
       toast('Tarehe ya kutoka lazima iwe baada ya tarehe ya kuingia', 'error');
       return;
     }
+
     setBookingLoading(true);
     try {
       const r = await api.post('/bookings', {
@@ -145,7 +193,9 @@ export default function PropertyDetail() {
       setBookingDetails({ check_in: '', check_out: '', guests: 1, special_requests: '' });
     } catch (e) {
       toast(e.response?.data?.message || 'Hitilafu wakati wa kuweka booking', 'error');
-    } finally { setBookingLoading(false); }
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   const handleCall = () => {
@@ -190,7 +240,8 @@ export default function PropertyDetail() {
 
   return (
     <div className="min-h-screen bg-surface pb-28 md:pb-10 animate-fade-in">
-      {/* ─── HERO IMAGE ─── */}
+
+      {/* HERO IMAGE */}
       <div className="relative overflow-hidden bg-surface-3" style={{ height: 'clamp(260px, 46vw, 500px)' }}>
         {mainImg && (
           <img src={mainImg} alt={p.title} loading="eager"
@@ -199,7 +250,6 @@ export default function PropertyDetail() {
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
-
         <button onClick={() => navigate(-1)} aria-label="Rudi"
           className="absolute top-4 left-4 w-10 h-10 glass rounded-full flex items-center justify-center shadow-soft active:scale-90 transition-all z-10"
         >
@@ -207,7 +257,6 @@ export default function PropertyDetail() {
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-
         <div className="absolute top-4 right-4 flex gap-2 z-10">
           <button onClick={() => { navigator.share?.({ title: p.title, url: window.location.href }) || toast('Link imenakiliwa', 'success'); }}
             className="w-10 h-10 glass rounded-full flex items-center justify-center shadow-soft active:scale-90"
@@ -227,13 +276,11 @@ export default function PropertyDetail() {
             </svg>
           </button>
         </div>
-
         <div className="absolute bottom-3 left-3 flex gap-2 z-10">
           {p.is_premium === 1 && <div className="badge badge-gold shadow-gold">⭐ Premium</div>}
           <div className={`badge ${propStatus.color}`}>{propStatus.icon} {propStatus.label}</div>
           {p.owner_verified && <div className="badge bg-blue-50 text-blue-700">✓ Verified Owner</div>}
         </div>
-
         {allImages.length > 1 && (
           <div className="absolute bottom-3 right-3 glass-light text-ink text-xs font-bold px-2.5 py-1 rounded-full">
             📷 {imgIdx + 1}/{allImages.length}
@@ -241,7 +288,7 @@ export default function PropertyDetail() {
         )}
       </div>
 
-      {/* ─── THUMBNAIL STRIP ─── */}
+      {/* THUMBNAIL STRIP */}
       {allImages.length > 1 && (
         <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar bg-white border-b border-surface-4">
           {allImages.map((img, i) => {
@@ -259,8 +306,9 @@ export default function PropertyDetail() {
         </div>
       )}
 
-      {/* ─── BODY ─── */}
+      {/* BODY */}
       <div className="px-4 pt-5 md:max-w-3xl md:mx-auto">
+
         {/* Price + Title + Time uploaded */}
         <div className="mb-4">
           <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -268,7 +316,7 @@ export default function PropertyDetail() {
               <div className="font-serif text-3xl md:text-4xl font-semibold text-primary">
                 {formatPrice(p.price)}
                 <span className="font-sans text-sm font-normal text-ink-5 ml-2">
-                  {p.price_type === 'rent' ? '/mwezi' : '--- bei ya mwisho'}
+                  {p.price_type === 'rent' ? '/mwezi' : '-- bei ya mwisho'}
                 </span>
               </div>
               <h1 className="text-xl font-bold text-ink mt-1.5 leading-snug">{p.title}</h1>
@@ -332,14 +380,95 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        {/* ─── OWNER CARD ─── */}
+        {/* ============================================================
+            PROPERTY REVIEWS SECTION (FIXED)
+        ============================================================ */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-ink">⭐ Maoni ya Wateja</h2>
+            {user && !isOwnProperty && (
+              <button
+                onClick={() => setShowPropertyReviewModal(true)}
+                className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"
+              >
+                + Ongeza Maoni
+              </button>
+            )}
+          </div>
+
+          {/* Rating summary */}
+          {p.reviews && p.reviews.length > 0 ? (
+            <>
+              <div className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-3">
+                <div className="flex items-center gap-4">
+                  <div className="text-center">
+                    <div className="font-serif text-5xl font-semibold text-primary">
+                      {p.avg_rating ? parseFloat(p.avg_rating).toFixed(1) : '--'}
+                    </div>
+                    <div className="mt-1">{renderStars(Math.round(p.avg_rating || 0), 'md')}</div>
+                    <div className="text-2xs text-ink-5 mt-1">{p.review_count} maoni</div>
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    {[5, 4, 3, 2, 1].map(n => {
+                      const cnt = p.reviews.filter(r => r.rating === n).length;
+                      const pct = p.reviews.length ? Math.round(cnt / p.reviews.length * 100) : 0;
+                      return (
+                        <div key={n} className="flex items-center gap-2">
+                          <span className="text-2xs text-ink-5 w-2.5 text-right">{n}</span>
+                          <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                            <div className="h-full bg-yellow-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-2xs text-ink-6 w-5 text-right">{cnt}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Review list */}
+              {p.reviews.slice(0, 5).map(r => (
+                <div key={r.id} className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-2">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-primary-50 flex-shrink-0">
+                      <img src={getAvatar({ avatar: r.reviewer_avatar })} alt=""
+                        className="w-full h-full object-cover"
+                        onError={e => { e.target.style.display = 'none'; }}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-ink">{r.reviewer_name || 'Mtumiaji'}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">{renderStars(r.rating, 'sm')}</div>
+                    </div>
+                  </div>
+                  {r.comment && <p className="text-sm text-ink-4 leading-relaxed italic">"{r.comment}"</p>}
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="bg-white rounded-2xl p-6 text-center shadow-soft border border-surface-4">
+              <div className="text-4xl mb-2">📝</div>
+              <p className="text-sm text-ink-5">Hakuna maoni bado</p>
+              <p className="text-xs text-ink-6 mt-1">Kuwa wa kwanza kutoa maoni kuhusu mali hii</p>
+              {user && !isOwnProperty && (
+                <button
+                  onClick={() => setShowPropertyReviewModal(true)}
+                  className="mt-3 text-primary font-semibold text-sm hover:underline"
+                >
+                  + Andika Maoni
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* OWNER CARD */}
         <div className="mb-5">
           <h2 className="text-base font-bold text-ink mb-3">Wasiliana Na</h2>
           <div className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4">
             <div className="flex items-start gap-3">
               <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-primary-50">
-                <img src={ownerImg} alt={p.owner_name} className="w-full h-full object-cover"
-                  onError={e => { e.target.style.display = 'none'; }} />
+                <img src={ownerImg} alt={p.owner_name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-ink flex items-center gap-2 flex-wrap">
@@ -350,12 +479,12 @@ export default function PropertyDetail() {
                 <div className="text-xs text-ink-5 mt-0.5">
                   {p.owner_role === 'agent' ? '🧑‍💼 Dalali Aliyethibitishwa' : '🏠 Mwenye Nyumba'}
                 </div>
-                
+
                 {/* Owner rating stars */}
                 <div className="flex items-center gap-1.5 mt-1.5">
                   {renderStars(Math.round(ownerRating || 0), 'sm')}
                   <span className="text-xs font-semibold text-ink-4">
-                    {ownerRating ? parseFloat(ownerRating).toFixed(1) : '---'}
+                    {ownerRating ? parseFloat(ownerRating).toFixed(1) : '--'}
                   </span>
                   <span className="text-xs text-ink-6">({ownerReviews.length || 0} tathmini)</span>
                 </div>
@@ -396,7 +525,7 @@ export default function PropertyDetail() {
                   <div key={r.id} className="text-xs text-ink-5 mb-2">
                     <div className="flex items-center gap-1">{renderStars(r.rating, 'xs')}</div>
                     <p className="italic line-clamp-2">"{r.review}"</p>
-                    <p className="text-2xs text-ink-6">— {r.rater_name}</p>
+                    <p className="text-2xs text-ink-6">--- {r.rater_name}</p>
                   </div>
                 ))}
               </div>
@@ -407,6 +536,7 @@ export default function PropertyDetail() {
                 ℹ️ Hii ni tangazo lako. Unaweza kulihariri.
               </div>
             )}
+
             {!user && (
               <button onClick={() => navigate('/auth')}
                 className="w-full mt-3 py-2.5 bg-surface border-2 border-surface-4 text-ink-4 rounded-xl text-sm font-semibold active:scale-[.98] transition-all"
@@ -416,54 +546,6 @@ export default function PropertyDetail() {
             )}
           </div>
         </div>
-
-        {/* ─── PROPERTY REVIEWS ─── */}
-        {p.reviews?.length > 0 && (
-          <div className="mb-5">
-            <h2 className="text-base font-bold text-ink mb-3">⭐ Maoni ya Wateja kwenye Mali</h2>
-            <div className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-3">
-              <div className="flex items-center gap-4">
-                <div className="text-center">
-                  <div className="font-serif text-5xl font-semibold text-primary">
-                    {p.avg_rating ? parseFloat(p.avg_rating).toFixed(1) : '---'}
-                  </div>
-                  <div className="mt-1">{renderStars(Math.round(p.avg_rating || 0), 'md')}</div>
-                  <div className="text-2xs text-ink-5 mt-1">{p.review_count} maoni</div>
-                </div>
-                <div className="flex-1 space-y-1.5">
-                  {[5, 4, 3, 2, 1].map(n => {
-                    const cnt = p.reviews.filter(r => r.rating === n).length;
-                    const pct = p.reviews.length ? Math.round(cnt / p.reviews.length * 100) : 0;
-                    return (
-                      <div key={n} className="flex items-center gap-2">
-                        <span className="text-2xs text-ink-5 w-2.5 text-right">{n}</span>
-                        <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                          <div className="h-full bg-yellow-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-2xs text-ink-6 w-5 text-right">{cnt}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            {p.reviews.slice(0, 4).map(r => (
-              <div key={r.id} className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-2">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-primary-50 flex-shrink-0">
-                    <img src={getAvatar({ avatar: r.reviewer_avatar })} alt="" className="w-full h-full object-cover"
-                      onError={e => { e.target.style.display = 'none'; }} />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-ink">{r.reviewer_name}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">{renderStars(r.rating, 'sm')}</div>
-                  </div>
-                </div>
-                {r.comment && <p className="text-sm text-ink-4 leading-relaxed italic">"{r.comment}"</p>}
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Edit button for owner */}
         {isOwnProperty && (
@@ -477,7 +559,7 @@ export default function PropertyDetail() {
         )}
       </div>
 
-      {/* ─── STICKY CTA ─── */}
+      {/* STICKY CTA */}
       <div className="fixed bottom-0 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
         <div className="glass border-t border-black/[0.07] px-4 py-3 flex gap-3 max-w-lg mx-auto md:max-w-3xl">
           <button onClick={openChat}
@@ -498,7 +580,21 @@ export default function PropertyDetail() {
         </div>
       </div>
 
-      {/* ─── RATING MODAL ─── */}
+      {/* PROPERTY REVIEW MODAL */}
+      <RatingModal
+        isOpen={showPropertyReviewModal}
+        onClose={() => setShowPropertyReviewModal(false)}
+        userName={p.title}
+        userRole="property"
+        starValue={propertyStarValue}
+        setStarValue={setPropertyStarValue}
+        reviewText={propertyReviewText}
+        setReviewText={setPropertyReviewText}
+        onSubmit={handleSubmitPropertyReview}
+        submitting={submittingPropertyReview}
+      />
+
+      {/* OWNER RATING MODAL */}
       <RatingModal
         isOpen={showRatingModal}
         onClose={() => setShowRatingModal(false)}
@@ -512,7 +608,7 @@ export default function PropertyDetail() {
         submitting={submittingRating}
       />
 
-      {/* ─── BOOKING MODAL ─── */}
+      {/* BOOKING MODAL */}
       <BookingModal
         isOpen={showBookingModal}
         onClose={() => setShowBookingModal(false)}

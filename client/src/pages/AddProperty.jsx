@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -34,8 +34,8 @@ const PROP_STATUS = [
 
 // Google Maps autocomplete component
 const LocationPicker = ({ onLocationSelect, address, setAddress, lat, setLat, lng, setLng }) => {
-  const inputRef = useRef(null);
-  const autocompleteRef = useRef(null);
+  const inputRef = React.useRef(null);
+  const autocompleteRef = React.useRef(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -172,27 +172,28 @@ export default function AddProperty() {
 
   // Form state
   const [form, setForm] = useState({
-    title: '', description: '', type: 'nyumba', price: '', price_type: 'rent',
-    city: 'Dar es Salaam', area: '', address: '', bedrooms: '', bathrooms: '',
-    size_sqm: '', property_status: 'available',
+    title: '', description: '', type: 'nyumba', price: '',
+    price_type: 'rent', city: 'Dar es Salaam', area: '', address: '',
+    bedrooms: '', bathrooms: '', size_sqm: '', property_status: 'available',
   });
-  
+
   // Location state
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [placeId, setPlaceId] = useState(null);
   const [formattedAddress, setFormattedAddress] = useState('');
-  
+
   const [amenities, setAmenities] = useState([]);
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
+  const [imagesToRemove, setImagesToRemove] = useState([]);
   const [boost, setBoost] = useState('free');
   const [loading, setLoading] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [newPropId, setNewPropId] = useState(null);
-  
+
   const isEdit = !!editId;
   const allowed = user && ['agent', 'owner', 'admin'].includes(user.role);
 
@@ -212,7 +213,7 @@ export default function AddProperty() {
         });
         setLatitude(p.latitude || null);
         setLongitude(p.longitude || null);
-        setFormattedAddress(p.address || '');
+        setFormattedAddress(p.formatted_address || p.address || '');
         setPlaceId(p.place_id || null);
         setAmenities(p.amenities || []);
         setExistingImages(p.images || []);
@@ -233,9 +234,10 @@ export default function AddProperty() {
     setPreviews(prev => [...prev, ...validFiles.map(f => URL.createObjectURL(f))]);
   };
 
-  const removeImage = (index, isExisting = false) => {
-    if (isExisting) {
+  const removeImage = (index, isExisting = false, existingId = null) => {
+    if (isExisting && existingId) {
       setExistingImages(prev => prev.filter((_, i) => i !== index));
+      setImagesToRemove(prev => [...prev, existingId]);
     } else {
       setImages(prev => prev.filter((_, i) => i !== index));
       setPreviews(prev => prev.filter((_, i) => i !== index));
@@ -265,8 +267,10 @@ export default function AddProperty() {
     }
   };
 
+  // CRITICAL FIX: Handle form submission with FormData
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!form.title || !form.area || !form.price) {
       toast('Jaza sehemu zote muhimu', 'error');
       return;
@@ -281,21 +285,35 @@ export default function AddProperty() {
     }
 
     setLoading(true);
+
     try {
       const fd = new FormData();
+
+      // Add form fields
       Object.entries(form).forEach(([k, v]) => {
         if (v !== undefined && v !== '') fd.append(k, v);
       });
+
+      // Add location data
       if (latitude) fd.append('latitude', latitude);
       if (longitude) fd.append('longitude', longitude);
       if (placeId) fd.append('place_id', placeId);
       if (formattedAddress) fd.append('formatted_address', formattedAddress);
-      
+
+      // Add amenities
       amenities.forEach(a => fd.append('amenities', a));
-      images.forEach(img => fd.append('images', img));
-      
-      if (isEdit && existingImages.length) {
-        fd.append('existing_images', JSON.stringify(existingImages.map(img => img.id)));
+
+      // CRITICAL: Add image files
+      if (images.length > 0) {
+        images.forEach(img => {
+          fd.append('images', img);
+        });
+        console.log(`📸 Adding ${images.length} new images to form`);
+      }
+
+      // For edit: specify which existing images to keep
+      if (isEdit && imagesToRemove.length > 0) {
+        fd.append('remove_images', JSON.stringify(imagesToRemove));
       }
 
       let r;
@@ -319,6 +337,7 @@ export default function AddProperty() {
         }
       }
     } catch (e) {
+      console.error('Submit error:', e);
       toast(e.response?.data?.message || 'Hitilafu ya seva', 'error');
     } finally {
       setLoading(false);
@@ -354,14 +373,13 @@ export default function AddProperty() {
   return (
     <div className="min-h-screen bg-surface pb-28 md:pb-10 animate-fade-in-up">
       <TopBar title={isEdit ? 'Hariri Tangazo' : 'Ongeza Mali Mpya'} showBack />
-
       <form onSubmit={handleSubmit} className="md:max-w-2xl md:mx-auto">
         {/* ─── IMAGES UPLOAD ─── */}
         <div className="bg-white rounded-2xl m-3 p-4 shadow-soft border border-surface-4">
           <h3 className="text-sm font-bold text-ink mb-3 flex items-center gap-2">
             <span>📸</span> Picha za Mali <span className="text-xs text-ink-4 font-normal">(Angalau picha 1, max 10MB)</span>
           </h3>
-          
+
           <input type="file" multiple accept="image/*" onChange={handleImages} id="img-input" className="hidden" />
           <label htmlFor="img-input"
             className="border-2 border-dashed border-surface-4 rounded-2xl p-6 flex flex-col items-center cursor-pointer hover:border-primary hover:bg-primary-50/30 transition-all"
@@ -376,16 +394,17 @@ export default function AddProperty() {
             <p className="text-xs text-ink-6 mt-0.5">PNG, JPG, WEBP hadi 10MB kila moja</p>
           </label>
 
+          {/* Existing images (edit mode) */}
           {existingImages.length > 0 && (
             <div className="mt-3">
               <p className="text-xs font-semibold text-ink-5 mb-2">Picha zilizopo:</p>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {existingImages.map((img, i) => (
-                  <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 border-surface-4">
+                  <div key={img.id} className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 border-surface-4">
                     <img src={img.image_url} alt="" className="w-full h-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => removeImage(i, true)}
+                      onClick={() => removeImage(i, true, img.id)}
                       className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center hover:bg-red-600"
                     >
                       ✕
@@ -396,6 +415,7 @@ export default function AddProperty() {
             </div>
           )}
 
+          {/* New image previews */}
           {previews.length > 0 && (
             <div className="mt-3">
               <p className="text-xs font-semibold text-ink-5 mb-2">Picha mpya:</p>
@@ -420,7 +440,7 @@ export default function AddProperty() {
         {/* ─── DETAILS ─── */}
         <div className="bg-white rounded-2xl m-3 p-4 shadow-soft border border-surface-4 space-y-4">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2"><span>🏠</span> Maelezo ya Mali</h3>
-          
+
           <div>
             <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Kichwa cha Tangazo *</label>
             <input value={form.title} onChange={e => set('title', e.target.value)}
@@ -445,7 +465,7 @@ export default function AddProperty() {
           <div>
             <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Maelezo *</label>
             <textarea value={form.description} onChange={e => set('description', e.target.value)}
-              rows={4} placeholder="Elezea mali yako kwa undani --- eneo, hali, facilities..." className="input-field resize-none" />
+              rows={4} placeholder="Elezea mali yako kwa undani -- eneo, hali, facilities..." className="input-field resize-none" />
           </div>
 
           <div>
@@ -466,7 +486,7 @@ export default function AddProperty() {
         {/* ─── LOCATION WITH GOOGLE MAPS ─── */}
         <div className="bg-white rounded-2xl m-3 p-4 shadow-soft border border-surface-4 space-y-4">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2"><span>📍</span> Eneo na Ramani</h3>
-          
+
           <LocationPicker
             onLocationSelect={handleLocationSelect}
             address={formattedAddress}
@@ -495,7 +515,7 @@ export default function AddProperty() {
         {/* ─── PRICE ─── */}
         <div className="bg-white rounded-2xl m-3 p-4 shadow-soft border border-surface-4 space-y-3">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2"><span>💰</span> Bei</h3>
-          
+
           <div className="flex gap-1 bg-surface p-1 rounded-xl">
             {[['rent', 'Kukodi / Mwezi'], ['sale', 'Kuuza']].map(([v, l]) => (
               <button key={v} type="button" onClick={() => set('price_type', v)}

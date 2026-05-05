@@ -1,0 +1,91 @@
+PRODUCTION URLs
+Platform	URL	Purpose
+Frontend (Vercel)	https://makaziplus.vercel.app	Live application - users access here
+Backend API (Render)	https://makaziplus-api.onrender.com	API endpoint for frontend
+API Health Check	https://makaziplus-api.onrender.com/api/health	Check if backend is running
+API Properties	https://makaziplus-api.onrender.com/api/properties	View property data
+📊 DASHBOARDS (For Making Updates)
+Platform	Dashboard URL	What You Can Do
+Vercel	https://vercel.com/mikaelpusindawa-4490s-projects	Deploy frontend, view logs, manage domains
+Render	https://dashboard.render.com	Deploy backend, view logs, restart service
+Aiven	https://console.aiven.io	Manage MySQL database, run SQL queries
+🔑 Login Credentials (Save These)
+Vercel
+text
+Login with: GitHub (mikaelpusindawa-coder)
+Render
+text
+Login with: GitHub (mikaelpusindawa-coder)
+Aiven
+text
+Email: mikaelpusindawa@gmail.com
+Password: [Your Aiven password]
+📁 Direct Links to Your Services
+Vercel Project:
+text
+https://vercel.com/mikaelpusindawa-4490s-projects/makaziplus
+Render Web Service:
+text
+https://dashboard.render.com/web/srv-d7rihjdckfvc73a30itg
+Aiven MySQL Service:
+text
+https://console.aiven.io/project/mikaelpusindawa-f075/service/mysql-22c58502
+🛠️ Quick Actions
+Deploy Frontend (Vercel)
+bash
+cd client
+git add .
+git commit -m "your message"
+git push origin main
+Or click "Redeploy" on Vercel Dashboard
+
+Deploy Backend (Render)
+bash
+cd server
+git add .
+git commit -m "your message"
+git push origin main
+Or click "Manual Deploy" → "Deploy latest commit" on Render Dashboard
+
+Run SQL on Aiven
+Go to Aiven Console
+
+Click your MySQL service
+
+Click "Connection Information"
+
+Connect via MySQL Workbench using the details
+
+📋 Database Connection Details (Aiven)
+text
+Host: mysql-22c58502-mikaelpusindawa-f075.l.aivencloud.com
+Port: 13582
+Database: makaziplus41
+Username: avnadmin
+Password: [Your Aiven password]
+SSL: REQUIRED
+🐙 GitHub Repository
+text
+https://github.com/mikaelpusindawa-coder/makaziplus
+📝 Bookmark These:
+Service	Bookmark This
+Frontend	https://makaziplus.vercel.app
+Backend API	https://makaziplus-api.onrender.com
+Vercel Dashboard	https://vercel.com/mikaelpusindawa-4490s-projects
+Render Dashboard	https://dashboard.render.com
+Aiven Console	https://console.aiven.io
+GitHub Repo	https://github.com/mikaelpusindawa-coder/makaziplus
+
+
+    //CURRENTLY ADDED-------
+
+     All Your Links:
+Service	URL
+Frontend	https://makaziplus.vercel.app
+Backend API	https://makaziplus-api.onrender.com
+Health Check	https://makaziplus-api.onrender.com/api/health
+Properties API	https://makaziplus-api.onrender.com/api/properties
+Vercel Dashboard	https://vercel.com/mikaelpusindawa-4490s-projects
+Render Dashboard	https://dashboard.render.com
+Aiven Console	https://console.aiven.io
+GitHub Repo	https://github.com/mikaelpusindawa-coder/makaziplus

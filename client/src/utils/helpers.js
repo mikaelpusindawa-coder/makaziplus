@@ -42,10 +42,15 @@ export const formatDate = (dateStr) => {
   });
 };
 
+// ============================================================
 // CRITICAL FIX: Get property image - correctly handles uploaded images
+// ============================================================
 export const getPropertyImage = (prop) => {
   const getBaseUrl = () => {
-    return process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    // Use environment variable or fallback to localhost
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    // Remove /api suffix to get base URL for static files
+    return apiUrl.replace('/api', '');
   };
 
   // FIRST: Check if property has images array from API
@@ -56,23 +61,27 @@ export const getPropertyImage = (prop) => {
     if (imgToUse && imgToUse.image_url) {
       // If it's an uploaded image (starts with /uploads), add base URL
       if (imgToUse.image_url.startsWith('/uploads')) {
-        return `${getBaseUrl()}${imgToUse.image_url}`;
+        const fullUrl = `${getBaseUrl()}${imgToUse.image_url}`;
+        console.log(`✅ Image from images array: ${fullUrl}`);
+        return fullUrl;
       }
       return imgToUse.image_url;
     }
   }
-  
+
   // SECOND: Check primary_image field
   if (prop?.primary_image) {
     if (prop.primary_image.startsWith('/uploads')) {
-      return `${getBaseUrl()}${prop.primary_image}`;
+      const fullUrl = `${getBaseUrl()}${prop.primary_image}`;
+      console.log(`✅ Image from primary_image: ${fullUrl}`);
+      return fullUrl;
     }
     return prop.primary_image;
   }
-  
+
   // THIRD: For debugging - log what we're trying to display
-  console.log('No image found for property:', prop?.id, prop?.title);
-  
+  console.log(`⚠️ No image found for property: ${prop?.id} - ${prop?.title}`);
+
   // FALLBACK: Use property-specific fallback based on ID
   const fallbacks = [
     'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=75',
@@ -86,7 +95,7 @@ export const getPropertyImage = (prop) => {
     'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=75',
     'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=600&q=75',
   ];
-  
+
   const index = (prop?.id || 0) % fallbacks.length;
   return fallbacks[index];
 };
@@ -102,9 +111,10 @@ export const AVATAR_IMAGES = [
 
 export const getAvatar = (user) => {
   const getBaseUrl = () => {
-    return process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    return apiUrl.replace('/api', '');
   };
-  
+
   if (user?.avatar) {
     if (user.avatar.startsWith('/uploads')) {
       return `${getBaseUrl()}${user.avatar}`;
