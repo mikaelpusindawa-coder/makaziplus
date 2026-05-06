@@ -174,6 +174,7 @@ export default function AddProperty() {
     title: '', description: '', type: 'nyumba', price: '',
     price_type: 'rent', city: 'Dar es Salaam', area: '', address: '',
     bedrooms: '', bathrooms: '', size_sqm: '', property_status: 'available',
+    video_url: '',
   });
 
   // Location state
@@ -187,6 +188,13 @@ export default function AddProperty() {
   const [previews, setPreviews] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
   const [imagesToRemove, setImagesToRemove] = useState([]);
+  
+  // Video states
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [existingVideoUrl, setExistingVideoUrl] = useState('');
+  
   const [boost, setBoost] = useState('free');
   const [loading, setLoading] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
@@ -209,6 +217,7 @@ export default function AddProperty() {
           area: p.area || '', address: p.address || '', bedrooms: p.bedrooms || '',
           bathrooms: p.bathrooms || '', size_sqm: p.size_sqm || '',
           property_status: p.property_status || 'available',
+          video_url: p.video_url || '',
         });
         setLatitude(p.latitude || null);
         setLongitude(p.longitude || null);
@@ -216,6 +225,10 @@ export default function AddProperty() {
         setPlaceId(p.place_id || null);
         setAmenities(p.amenities || []);
         setExistingImages(p.images || []);
+        setExistingVideoUrl(p.video_url || '');
+        if (p.video_url) {
+          setVideoUrl(p.video_url);
+        }
       })
       .catch(() => toast('Hitilafu ya kupakia', 'error'))
       .finally(() => setLoadingEdit(false));
@@ -243,6 +256,44 @@ export default function AddProperty() {
     }
   };
 
+  // Video handlers
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 50 * 1024 * 1024) {
+      toast('Video ni kubwa sana (max 50MB)', 'error');
+      return;
+    }
+    
+    if (!file.type.startsWith('video/')) {
+      toast('Tafadhali chagua video tu (MP4, WebM, MOV)', 'error');
+      return;
+    }
+    
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+    setVideoUrl('');
+    setForm(prev => ({ ...prev, video_url: '' }));
+  };
+
+  const handleVideoUrlChange = (e) => {
+    const url = e.target.value;
+    setVideoUrl(url);
+    setForm(prev => ({ ...prev, video_url: url }));
+    if (url) {
+      setVideoFile(null);
+      setVideoPreview('');
+    }
+  };
+
+  const removeVideo = () => {
+    setVideoFile(null);
+    setVideoPreview('');
+    setVideoUrl('');
+    setForm(prev => ({ ...prev, video_url: '' }));
+  };
+
   const toggleAmenity = (a) => {
     setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
   };
@@ -266,15 +317,6 @@ export default function AddProperty() {
     }
   };
 
-  // FIXED: Safe price formatting with parseFloat
-  const formatPriceDisplay = (price) => {
-    const num = parseFloat(price);
-    if (isNaN(num)) return 'TSh 0';
-    if (num >= 1_000_000) return `TSh ${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `TSh ${(num / 1_000).toFixed(0)}K`;
-    return `TSh ${num.toLocaleString()}`;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -282,11 +324,13 @@ export default function AddProperty() {
       toast('Jaza sehemu zote muhimu', 'error');
       return;
     }
+    
     const priceNum = parseFloat(form.price);
     if (isNaN(priceNum) || priceNum <= 0) {
       toast('Bei lazima iwe kubwa kuliko sifuri', 'error');
       return;
     }
+    
     if (images.length === 0 && existingImages.length === 0 && !isEdit) {
       toast('Pakia angalau picha moja', 'error');
       return;
@@ -295,43 +339,100 @@ export default function AddProperty() {
     setLoading(true);
 
     try {
-      const fd = new FormData();
-
-      Object.entries(form).forEach(([k, v]) => {
-        if (v !== undefined && v !== '') fd.append(k, v);
-      });
-
-      if (latitude) fd.append('latitude', latitude);
-      if (longitude) fd.append('longitude', longitude);
-      if (placeId) fd.append('place_id', placeId);
-      if (formattedAddress) fd.append('formatted_address', formattedAddress);
-
-      amenities.forEach(a => fd.append('amenities', a));
-
-      if (images.length > 0) {
-        images.forEach(img => {
-          fd.append('images', img);
-        });
-        console.log(`📸 Adding ${images.length} new images to form`);
-      }
-
-      if (isEdit && imagesToRemove.length > 0) {
-        fd.append('remove_images', JSON.stringify(imagesToRemove));
-      }
-
-      let r;
       if (isEdit) {
-        r = await api.patch(`/properties/${editId}`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        toast('Tangazo limesasishwa! ✅', 'success');
-        navigate(`/property/${editId}`);
-        return;
+        const hasImageChanges = images.length > 0 || imagesToRemove.length > 0;
+        const hasVideoChanges = videoFile !== null || (videoUrl !== existingVideoUrl);
+        
+        if (!hasImageChanges && !hasVideoChanges) {
+          // Send as JSON
+          const updateData = {
+            title: form.title,
+            description: form.description,
+            type: form.type,
+            price: parseFloat(form.price),
+            price_type: form.price_type,
+            city: form.city,
+            area: form.area,
+            address: form.address || '',
+            bedrooms: parseInt(form.bedrooms) || 0,
+            bathrooms: parseInt(form.bathrooms) || 0,
+            size_sqm: parseInt(form.size_sqm) || 0,
+            property_status: form.property_status,
+            latitude: latitude,
+            longitude: longitude,
+            place_id: placeId,
+            formatted_address: formattedAddress,
+            video_url: videoUrl || null,
+          };
+          
+          await api.patch(`/properties/${editId}`, updateData);
+          toast('Tangazo limesasishwa! ✅', 'success');
+          navigate(`/property/${editId}`);
+        } else {
+          // Has image or video changes - use FormData
+          const fd = new FormData();
+          
+          Object.keys(form).forEach(key => {
+            if (form[key] !== undefined && form[key] !== '') {
+              fd.append(key, form[key]);
+            }
+          });
+          
+          if (latitude) fd.append('latitude', latitude);
+          if (longitude) fd.append('longitude', longitude);
+          if (placeId) fd.append('place_id', placeId);
+          if (formattedAddress) fd.append('formatted_address', formattedAddress);
+          
+          amenities.forEach(a => fd.append('amenities', a));
+          images.forEach(img => fd.append('images', img));
+          
+          if (imagesToRemove.length > 0) {
+            fd.append('remove_images', JSON.stringify(imagesToRemove));
+          }
+          
+          if (videoFile) {
+            fd.append('images', videoFile); // Videos will be handled separately by the backend
+          }
+          if (videoUrl) {
+            fd.append('video_url', videoUrl);
+          }
+          
+          await api.patch(`/properties/${editId}`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          toast('Tangazo limesasishwa! ✅', 'success');
+          navigate(`/property/${editId}`);
+        }
       } else {
-        r = await api.post('/properties', fd, {
+        // Create new property - use FormData
+        const fd = new FormData();
+        
+        Object.keys(form).forEach(key => {
+          if (form[key] !== undefined && form[key] !== '') {
+            fd.append(key, form[key]);
+          }
+        });
+        
+        if (latitude) fd.append('latitude', latitude);
+        if (longitude) fd.append('longitude', longitude);
+        if (placeId) fd.append('place_id', placeId);
+        if (formattedAddress) fd.append('formatted_address', formattedAddress);
+        
+        amenities.forEach(a => fd.append('amenities', a));
+        images.forEach(img => fd.append('images', img));
+        
+        if (videoFile) {
+          fd.append('images', videoFile);
+        }
+        if (videoUrl) {
+          fd.append('video_url', videoUrl);
+        }
+        
+        const response = await api.post('/properties', fd, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        setNewPropId(r.data.data?.id);
+        
+        setNewPropId(response.data.data?.id);
         if (boost !== 'free') {
           setPayOpen(true);
         } else {
@@ -436,6 +537,88 @@ export default function AddProperty() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ─── VIDEO UPLOAD SECTION ─── */}
+        <div className="bg-white rounded-2xl m-3 p-4 shadow-soft border border-surface-4">
+          <h3 className="text-sm font-bold text-ink mb-3 flex items-center gap-2">
+            <span>🎬</span> Video ya Mali <span className="text-xs text-ink-4 font-normal">(Hiari - max 50MB)</span>
+          </h3>
+          
+          <div className="space-y-3">
+            {/* Video URL input */}
+            <div>
+              <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">
+                URL ya Video (YouTube / Vimeo)
+              </label>
+              <input
+                type="text"
+                value={videoUrl}
+                onChange={handleVideoUrlChange}
+                placeholder="https://www.youtube.com/watch?v=..."
+                className="input-field"
+              />
+            </div>
+            
+            {/* OR Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-surface-4"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-2 bg-white text-ink-5">AU</span>
+              </div>
+            </div>
+            
+            {/* Video file upload */}
+            <div>
+              <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">
+                Pakia Video (MP4, WebM, MOV)
+              </label>
+              <input
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={handleVideoChange}
+                className="input-field"
+              />
+              <p className="text-2xs text-ink-5 mt-1">Upeo wa ukubwa: 50MB</p>
+            </div>
+            
+            {/* Video preview */}
+            {(videoPreview || videoUrl) && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-ink-5 mb-2">Preview ya Video:</p>
+                <div className="relative rounded-xl overflow-hidden bg-black">
+                  {videoPreview ? (
+                    <video src={videoPreview} controls className="w-full max-h-48 object-contain" />
+                  ) : videoUrl && (
+                    <div className="aspect-video">
+                      <iframe
+                        src={videoUrl.includes('youtube.com') ? videoUrl.replace('watch?v=', 'embed/') : videoUrl}
+                        title="Video Preview"
+                        className="w-full h-48"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={removeVideo}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center hover:bg-red-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Info note */}
+            <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700">
+              <span className="font-bold">💡</span> Video inaongeza uaminifu kwa wateja. Unaweza kuweka URL ya YouTube au kupakia video yako mwenyewe.
+            </div>
+          </div>
         </div>
 
         {/* ─── DETAILS ─── */}

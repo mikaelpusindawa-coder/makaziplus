@@ -7,31 +7,40 @@ const uploadDir = path.join(__dirname, '../../uploads');
 const avatarDir = path.join(uploadDir, 'avatars');
 const propertyDir = path.join(uploadDir, 'properties');
 const verificationDir = path.join(uploadDir, 'verifications');
+const videoDir = path.join(uploadDir, 'videos');
 
-// Ensure directories exist synchronously at startup
+// Ensure directories exist
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
 if (!fs.existsSync(propertyDir)) fs.mkdirSync(propertyDir, { recursive: true });
 if (!fs.existsSync(verificationDir)) fs.mkdirSync(verificationDir, { recursive: true });
+if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true });
 
 console.log('✅ Upload directories ready');
 console.log(`   📁 Uploads: ${uploadDir}`);
 console.log(`   📁 Avatars: ${avatarDir}`);
 console.log(`   📁 Properties: ${propertyDir}`);
+console.log(`   📁 Videos: ${videoDir}`);
 console.log(`   📁 Verifications: ${verificationDir}`);
 
-// Allowed MIME types for images
-const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']);
+// Allowed MIME types for images and videos
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+  'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'
+]);
 
 // Allowed file extensions
-const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+const ALLOWED_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.webp', '.gif', 
+  '.mp4', '.webm', '.mov', '.ogg'
+]);
 
 // File filter function
 const fileFilter = (req, file, cb) => {
   if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Tumia picha za JPEG, PNG, WEBP, au GIF tu'), false);
+    cb(new Error('Tumia picha za JPEG, PNG, WEBP, GIF au video za MP4, WebM, MOV'), false);
   }
 };
 
@@ -52,18 +61,24 @@ const avatarStorage = multer.diskStorage({
 });
 
 // ============================================================
-// PROPERTY IMAGES STORAGE (CRITICAL FIX)
+// PROPERTY IMAGES STORAGE
 // ============================================================
 const propertyStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, propertyDir);
+    // Check if it's a video
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, videoDir);
+    } else {
+      cb(null, propertyDir);
+    }
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now();
     const randomNum = Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname).toLowerCase();
     const sanitizedExt = ALLOWED_EXTENSIONS.has(ext) ? ext : '.jpg';
-    cb(null, `prop-${timestamp}-${randomNum}${sanitizedExt}`);
+    const prefix = file.mimetype.startsWith('video/') ? 'video' : 'prop';
+    cb(null, `${prefix}-${timestamp}-${randomNum}${sanitizedExt}`);
   },
 });
 
@@ -94,11 +109,11 @@ const avatarUpload = multer({
   limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024 }
 });
 
-// Multiple property images upload (max 10 images)
+// Multiple files upload (property images + videos) - max 15 files total
 const propertyUpload = multer({
   storage: propertyStorage,
   fileFilter: fileFilter,
-  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, files: 10 }
+  limits: { fileSize: 50 * 1024 * 1024, files: 15 } // 50MB per video
 });
 
 // Verification documents upload (max 3 files)
@@ -109,20 +124,10 @@ const verificationUpload = multer({
 });
 
 // ============================================================
-// HELPER FUNCTION: Get file URL for response
-// ============================================================
-const getFileUrl = (req, filename) => {
-  if (!filename) return null;
-  // Return relative path that will be served by express static
-  return filename;
-};
-
-// ============================================================
 // EXPORT MIDDLEWARE FUNCTIONS
 // ============================================================
 
 module.exports = {
-  // Single file upload (avatar)
   single: (fieldName) => (req, res, next) => {
     avatarUpload.single(fieldName)(req, res, (err) => {
       if (err) {
@@ -133,27 +138,21 @@ module.exports = {
     });
   },
 
-  // Multiple files upload (property images) - CRITICAL FOR PROPERTY IMAGES
   array: (fieldName, maxCount) => (req, res, next) => {
     propertyUpload.array(fieldName, maxCount)(req, res, (err) => {
       if (err) {
         console.error('Upload error:', err.message);
         return res.status(400).json({ success: false, message: err.message });
       }
-      // Log uploaded files for debugging
       if (req.files && req.files.length) {
-        console.log(`✅ Uploaded ${req.files.length} property images`);
-        req.files.forEach((file, i) => {
-          console.log(`   Image ${i + 1}: ${file.filename}`);
-        });
-      } else {
-        console.log('⚠️ No property images uploaded');
+        const images = req.files.filter(f => !f.mimetype.startsWith('video/'));
+        const videos = req.files.filter(f => f.mimetype.startsWith('video/'));
+        console.log(`✅ Uploaded ${images.length} images and ${videos.length} videos`);
       }
       next();
     });
   },
 
-  // Multiple fields upload (verification documents)
   fields: (fields) => (req, res, next) => {
     verificationUpload.fields(fields)(req, res, (err) => {
       if (err) {
@@ -164,17 +163,13 @@ module.exports = {
     });
   },
 
-  // Get file URL helper
-  getFileUrl,
-
-  // Direct multer instances for advanced use
   avatarUpload,
   propertyUpload,
   verificationUpload,
   
-  // Directory paths for debugging
   uploadDir,
   propertyDir,
   avatarDir,
-  verificationDir
+  verificationDir,
+  videoDir
 };

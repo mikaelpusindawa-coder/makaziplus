@@ -34,6 +34,15 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
               ⭐ Prem
             </div>
           )}
+          {/* Video Badge */}
+          {(p.video_url || p.video_file) && (
+            <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" stroke="currentColor" strokeWidth="1">
+                <path d="M2 4v16h20V4H2zm18 14H4V6h16v12zm-9-9v6l5-3-5-3z" />
+              </svg>
+              Video
+            </div>
+          )}
         </div>
         <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
           <div>
@@ -83,6 +92,15 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
         {p.is_premium === 1 && (
           <div className="absolute top-2 left-2 bg-gold text-white text-2xs font-bold px-2.5 py-0.5 rounded-full shadow-gold">
             ⭐ Premium
+          </div>
+        )}
+        {/* Video Badge */}
+        {(p.video_url || p.video_file) && (
+          <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+            <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" stroke="currentColor" strokeWidth="1">
+              <path d="M2 4v16h20V4H2zm18 14H4V6h16v12zm-9-9v6l5-3-5-3z" />
+            </svg>
+            Video
           </div>
         )}
         {onFav && (

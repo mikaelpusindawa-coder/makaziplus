@@ -21,13 +21,7 @@ export default function PropertyDetail() {
   const [imgIdx, setImgIdx] = useState(0);
   const [payOpen, setPayOpen] = useState(false);
 
-  // Property review states
-  const [showPropertyReviewModal, setShowPropertyReviewModal] = useState(false);
-  const [propertyStarValue, setPropertyStarValue] = useState(0);
-  const [propertyReviewText, setPropertyReviewText] = useState('');
-  const [submittingPropertyReview, setSubmittingPropertyReview] = useState(false);
-
-  // Owner rating modal states
+  // Rating modal states
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [starValue, setStarValue] = useState(0);
   const [reviewText, setReviewText] = useState('');
@@ -103,38 +97,6 @@ export default function PropertyDetail() {
     navigate(`/chat?userId=${property.owner_id}`);
   };
 
-  // ============================================================
-  // SUBMIT PROPERTY REVIEW (FIX)
-  // ============================================================
-  const handleSubmitPropertyReview = async () => {
-    if (!user) { navigate('/auth'); return; }
-    if (!propertyStarValue) { toast('Chagua rating ya nyota', 'error'); return; }
-
-    setSubmittingPropertyReview(true);
-    try {
-      await api.post('/reviews', {
-        property_id: parseInt(id),
-        rating: propertyStarValue,
-        comment: propertyReviewText.trim() || null
-      });
-      toast('Asante kwa maoni yako! ⭐', 'success');
-      setShowPropertyReviewModal(false);
-      setPropertyStarValue(0);
-      setPropertyReviewText('');
-
-      // Refresh property to show new review
-      const r = await api.get(`/properties/${id}`);
-      setProperty(r.data.data);
-    } catch (e) {
-      toast(e.response?.data?.message || 'Hitilafu wakati wa kutuma maoni', 'error');
-    } finally {
-      setSubmittingPropertyReview(false);
-    }
-  };
-
-  // ============================================================
-  // SUBMIT OWNER RATING
-  // ============================================================
   const handleSubmitRating = async () => {
     if (!user) { navigate('/auth'); return; }
     if (!starValue) { toast('Chagua rating ya nyota', 'error'); return; }
@@ -162,9 +124,6 @@ export default function PropertyDetail() {
     }
   };
 
-  // ============================================================
-  // BOOKING HANDLER
-  // ============================================================
   const handleBooking = async () => {
     if (!user) { navigate('/auth'); return; }
     if (!bookingDetails.check_in || !bookingDetails.check_out) {
@@ -380,87 +339,31 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        {/* ============================================================
-            PROPERTY REVIEWS SECTION (FIXED)
-        ============================================================ */}
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold text-ink">⭐ Maoni ya Wateja</h2>
-            {user && !isOwnProperty && (
-              <button
-                onClick={() => setShowPropertyReviewModal(true)}
-                className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"
-              >
-                + Ongeza Maoni
-              </button>
-            )}
-          </div>
-
-          {/* Rating summary */}
-          {p.reviews && p.reviews.length > 0 ? (
-            <>
-              <div className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-3">
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <div className="font-serif text-5xl font-semibold text-primary">
-                      {p.avg_rating ? parseFloat(p.avg_rating).toFixed(1) : '--'}
-                    </div>
-                    <div className="mt-1">{renderStars(Math.round(p.avg_rating || 0), 'md')}</div>
-                    <div className="text-2xs text-ink-5 mt-1">{p.review_count} maoni</div>
-                  </div>
-                  <div className="flex-1 space-y-1.5">
-                    {[5, 4, 3, 2, 1].map(n => {
-                      const cnt = p.reviews.filter(r => r.rating === n).length;
-                      const pct = p.reviews.length ? Math.round(cnt / p.reviews.length * 100) : 0;
-                      return (
-                        <div key={n} className="flex items-center gap-2">
-                          <span className="text-2xs text-ink-5 w-2.5 text-right">{n}</span>
-                          <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                            <div className="h-full bg-yellow-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-2xs text-ink-6 w-5 text-right">{cnt}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Review list */}
-              {p.reviews.slice(0, 5).map(r => (
-                <div key={r.id} className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-2">
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <div className="w-9 h-9 rounded-full overflow-hidden bg-primary-50 flex-shrink-0">
-                      <img src={getAvatar({ avatar: r.reviewer_avatar })} alt=""
-                        className="w-full h-full object-cover"
-                        onError={e => { e.target.style.display = 'none'; }}
-                      />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-ink">{r.reviewer_name || 'Mtumiaji'}</div>
-                      <div className="flex items-center gap-1.5 mt-0.5">{renderStars(r.rating, 'sm')}</div>
-                    </div>
-                  </div>
-                  {r.comment && <p className="text-sm text-ink-4 leading-relaxed italic">"{r.comment}"</p>}
-                </div>
-              ))}
-            </>
-          ) : (
-            <div className="bg-white rounded-2xl p-6 text-center shadow-soft border border-surface-4">
-              <div className="text-4xl mb-2">📝</div>
-              <p className="text-sm text-ink-5">Hakuna maoni bado</p>
-              <p className="text-xs text-ink-6 mt-1">Kuwa wa kwanza kutoa maoni kuhusu mali hii</p>
-              {user && !isOwnProperty && (
-                <button
-                  onClick={() => setShowPropertyReviewModal(true)}
-                  className="mt-3 text-primary font-semibold text-sm hover:underline"
-                >
-                  + Andika Maoni
-                </button>
+        {/* ─── VIDEO SECTION ─── */}
+        {(p.video_url || p.video_file) && (
+          <div className="mb-5">
+            <h2 className="text-base font-bold text-ink mb-3">🎬 Video ya Mali</h2>
+            <div className="bg-black rounded-2xl overflow-hidden shadow-soft">
+              {p.video_url && (
+                <iframe
+                  src={p.video_url.includes('youtube.com') 
+                    ? p.video_url.replace('watch?v=', 'embed/') 
+                    : p.video_url.includes('youtu.be')
+                      ? `https://www.youtube.com/embed/${p.video_url.split('/').pop()}`
+                      : p.video_url}
+                  title="Property Video"
+                  className="w-full h-64 md:h-96"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
+              {p.video_file && !p.video_url && (
+                <video src={p.video_file} controls className="w-full h-64 md:h-96 object-contain" />
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* OWNER CARD */}
         <div className="mb-5">
@@ -547,6 +450,56 @@ export default function PropertyDetail() {
           </div>
         </div>
 
+        {/* PROPERTY REVIEWS */}
+        {p.reviews?.length > 0 && (
+          <div className="mb-5">
+            <h2 className="text-base font-bold text-ink mb-3">⭐ Maoni ya Wateja kwenye Mali</h2>
+            <div className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-3">
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <div className="font-serif text-5xl font-semibold text-primary">
+                    {p.avg_rating ? parseFloat(p.avg_rating).toFixed(1) : '--'}
+                  </div>
+                  <div className="mt-1">{renderStars(Math.round(p.avg_rating || 0), 'md')}</div>
+                  <div className="text-2xs text-ink-5 mt-1">{p.review_count} maoni</div>
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  {[5, 4, 3, 2, 1].map(n => {
+                    const cnt = p.reviews.filter(r => r.rating === n).length;
+                    const pct = p.reviews.length ? Math.round(cnt / p.reviews.length * 100) : 0;
+                    return (
+                      <div key={n} className="flex items-center gap-2">
+                        <span className="text-2xs text-ink-5 w-2.5 text-right">{n}</span>
+                        <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
+                          <div className="h-full bg-yellow-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-2xs text-ink-6 w-5 text-right">{cnt}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            {p.reviews.slice(0, 4).map(r => (
+              <div key={r.id} className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-2">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-9 h-9 rounded-full overflow-hidden bg-primary-50 flex-shrink-0">
+                    <img src={getAvatar({ avatar: r.reviewer_avatar })} alt=""
+                      className="w-full h-full object-cover"
+                      onError={e => { e.target.style.display = 'none'; }}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-ink">{r.reviewer_name}</div>
+                    <div className="flex items-center gap-1.5 mt-0.5">{renderStars(r.rating, 'sm')}</div>
+                  </div>
+                </div>
+                {r.comment && <p className="text-sm text-ink-4 leading-relaxed italic">"{r.comment}"</p>}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Edit button for owner */}
         {isOwnProperty && (
           <div className="mb-5">
@@ -580,21 +533,7 @@ export default function PropertyDetail() {
         </div>
       </div>
 
-      {/* PROPERTY REVIEW MODAL */}
-      <RatingModal
-        isOpen={showPropertyReviewModal}
-        onClose={() => setShowPropertyReviewModal(false)}
-        userName={p.title}
-        userRole="property"
-        starValue={propertyStarValue}
-        setStarValue={setPropertyStarValue}
-        reviewText={propertyReviewText}
-        setReviewText={setPropertyReviewText}
-        onSubmit={handleSubmitPropertyReview}
-        submitting={submittingPropertyReview}
-      />
-
-      {/* OWNER RATING MODAL */}
+      {/* RATING MODAL */}
       <RatingModal
         isOpen={showRatingModal}
         onClose={() => setShowRatingModal(false)}
