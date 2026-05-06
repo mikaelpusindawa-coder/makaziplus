@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { TopBar } from '../components/layout/TopBar';
@@ -34,19 +35,57 @@ const FILTERS = [
   { id: 'arusha', label: 'Arusha', icon: '📍' },
 ];
 
-// Hero Slider Component
+// Hero Slider Component with Auto-cycling
 const HeroSlider = ({ properties, loading }) => {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
 
+  // Auto-cycling interval - FIXED: now working
   useEffect(() => {
-    if (heroPaused || loading || !properties.length) return;
+    if (heroPaused || loading) return;
+    
+    const displayItems = properties.length >= 4 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
+    if (displayItems.length <= 1) return;
+    
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % Math.min(properties.length, 4));
-    }, 5000);
+      setCurrentIndex((prev) => (prev + 1) % displayItems.length);
+    }, 5000); // Change slide every 5 seconds
+    
     return () => clearInterval(interval);
   }, [heroPaused, loading, properties.length]);
+
+  // Touch handlers for mobile swipe
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const difference = touchStart - touchEnd;
+    const displayItems = properties.length >= 4 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
+    
+    if (difference > 50) {
+      // Swipe left - next slide
+      setCurrentIndex((prev) => (prev + 1) % displayItems.length);
+      setHeroPaused(true);
+      setTimeout(() => setHeroPaused(false), 8000);
+    }
+    if (difference < -50) {
+      // Swipe right - previous slide
+      setCurrentIndex((prev) => (prev - 1 + displayItems.length) % displayItems.length);
+      setHeroPaused(true);
+      setTimeout(() => setHeroPaused(false), 8000);
+    }
+    setTouchStart(0);
+    setTouchEnd(0);
+  };
 
   if (loading) {
     return (
@@ -60,14 +99,36 @@ const HeroSlider = ({ properties, loading }) => {
   const displayItems = properties.length >= 4 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
   const current = displayItems[currentIndex];
 
+  // Manual navigation functions
+  const goToSlide = (index) => {
+    setCurrentIndex(index);
+    setHeroPaused(true);
+    setTimeout(() => setHeroPaused(false), 8000);
+  };
+
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev + 1) % displayItems.length);
+    setHeroPaused(true);
+    setTimeout(() => setHeroPaused(false), 8000);
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev - 1 + displayItems.length) % displayItems.length);
+    setHeroPaused(true);
+    setTimeout(() => setHeroPaused(false), 8000);
+  };
+
   return (
     <div
-      className="relative mx-3 mt-3 md:mx-0 md:mt-0 rounded-3xl md:rounded-none overflow-hidden cursor-pointer"
+      className="relative mx-3 mt-3 md:mx-0 md:mt-0 rounded-3xl md:rounded-none overflow-hidden cursor-pointer group"
       style={{ height: 'clamp(200px, 35vw, 420px)' }}
       onMouseEnter={() => setHeroPaused(true)}
       onMouseLeave={() => setHeroPaused(false)}
-      onClick={() => !current.isFallback && navigate(`/property/${current.id}`)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
+      {/* Main Image */}
       <img
         src={current.isFallback ? current.image_url : getPropertyImage(current)}
         alt={current.title}
@@ -75,12 +136,18 @@ const HeroSlider = ({ properties, loading }) => {
         className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
         onError={(e) => { e.target.src = FALLBACK_HERO_IMAGES[0].image_url; }}
       />
+      
+      {/* Overlay Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-transparent" />
+      
+      {/* Premium Badge */}
       {current.is_premium === 1 && (
         <div className="absolute top-4 left-4 bg-gold text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-gold z-10">
           ⭐ Premium Listing
         </div>
       )}
+      
+      {/* Content */}
       <div className="absolute inset-0 p-5 md:p-10 flex flex-col justify-end z-10">
         <div className="animate-fade-in-up">
           <p className="text-white/80 text-sm font-medium mb-1">
@@ -99,15 +166,44 @@ const HeroSlider = ({ properties, loading }) => {
           )}
         </div>
       </div>
+      
+      {/* Navigation Arrows - Desktop */}
+      <button
+        onClick={(e) => { e.stopPropagation(); prevSlide(); }}
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20"
+      >
+        <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 md:h-5 stroke-white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); nextSlide(); }}
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20"
+      >
+        <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 md:h-5 stroke-white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+      
+      {/* Dots Indicator */}
       <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
         {displayItems.map((_, idx) => (
           <button
             key={idx}
-            onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); setHeroPaused(true); setTimeout(() => setHeroPaused(false), 8000); }}
-            className={`h-1.5 rounded-full transition-all duration-300 ${currentIndex === idx ? 'w-8 bg-white' : 'w-1.5 bg-white/40'}`}
+            onClick={(e) => { e.stopPropagation(); goToSlide(idx); }}
+            className={`transition-all duration-300 rounded-full ${
+              currentIndex === idx 
+                ? 'w-8 h-1.5 bg-white' 
+                : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/60'
+            }`}
           />
         ))}
       </div>
+      
+      {/* Auto-play indicator bar */}
+      {!heroPaused && !loading && displayItems.length > 1 && (
+        <div className="absolute bottom-0 left-0 h-1 bg-gold animate-slide-progress" style={{ width: '100%' }} />
+      )}
     </div>
   );
 };
@@ -117,6 +213,7 @@ const RecentMarquee = ({ items }) => {
   const navigate = useNavigate();
   if (!items.length) return null;
   const doubled = [...items, ...items];
+
   return (
     <div className="overflow-hidden relative">
       <div className="flex gap-3 animate-marquee" style={{ width: 'max-content' }}>
@@ -149,8 +246,10 @@ const RecentMarquee = ({ items }) => {
       </div>
       <style>{`
         @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes slideProgress { from { width: 100%; } to { width: 0%; } }
         .animate-marquee { animation: marquee 28s linear infinite; }
         .animate-marquee:hover { animation-play-state: paused; }
+        .animate-slide-progress { animation: slideProgress 5s linear forwards; }
       `}</style>
     </div>
   );
@@ -160,7 +259,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-
+  const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
   const [featured, setFeatured] = useState([]);
   const [newest, setNewest] = useState([]);
@@ -190,10 +289,11 @@ export default function Home() {
     try {
       const r = await api.get('/properties', { params: { ...buildParams(), premium: 1, limit: 8 } });
       setFeatured(r.data.data || []);
-    } catch (err) { 
-      console.error('Featured fetch error:', err); 
+    } catch (err) {
+      console.error('Featured fetch error:', err);
+    } finally {
+      setLoadingF(false);
     }
-    finally { setLoadingF(false); }
   }, [buildParams]);
 
   const fetchNewest = useCallback(async () => {
@@ -201,10 +301,11 @@ export default function Home() {
     try {
       const r = await api.get('/properties', { params: { ...buildParams(), limit: 10 } });
       setNewest(r.data.data || []);
-    } catch (err) { 
-      console.error('Newest fetch error:', err); 
+    } catch (err) {
+      console.error('Newest fetch error:', err);
+    } finally {
+      setLoadingN(false);
     }
-    finally { setLoadingN(false); }
   }, [buildParams]);
 
   const fetchHeroProperties = useCallback(async () => {
@@ -215,8 +316,9 @@ export default function Home() {
     } catch (err) {
       console.error('Hero fetch error:', err);
       setHeroProperties([]);
+    } finally {
+      setLoadingHero(false);
     }
-    finally { setLoadingHero(false); }
   }, []);
 
   useEffect(() => {
@@ -242,9 +344,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-8 page-enter">
       <TopBar />
-
       <HeroSlider properties={heroProperties} loading={loadingHero} />
 
+      {/* Stats Section */}
       <div className="flex justify-around px-4 py-4 md:max-w-2xl md:mx-auto">
         {STATS.map(s => (
           <div key={s.label} className="text-center">
@@ -254,6 +356,7 @@ export default function Home() {
         ))}
       </div>
 
+      {/* Filter Chips */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto">
         {FILTERS.map(f => (
           <button
@@ -267,6 +370,7 @@ export default function Home() {
         ))}
       </div>
 
+      {/* Featured Properties */}
       {featured.length > 0 && (
         <div className="mt-4 md:max-w-4xl md:mx-auto">
           <div className="flex items-center justify-between px-4 mb-3">
@@ -291,6 +395,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* Newest Properties Marquee */}
       {newest.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between px-4 mb-2.5">
@@ -303,8 +408,9 @@ export default function Home() {
             <RecentMarquee items={newest} />
           </div>
         </div>
-      )}   
+      )}
 
+      {/* All Properties */}
       <div className="mt-5 md:max-w-4xl md:mx-auto">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
@@ -330,6 +436,7 @@ export default function Home() {
         )}
       </div>
 
+      {/* CTA for non-logged in users */}
       {!user && (
         <div className="mx-4 mt-6 mb-4 bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
           <h3 className="font-serif text-xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
