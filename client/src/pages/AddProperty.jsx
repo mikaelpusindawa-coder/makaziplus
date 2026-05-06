@@ -39,7 +39,6 @@ const LocationPicker = ({ onLocationSelect, address, setAddress, lat, setLat, ln
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load Google Maps script dynamically
     if (!window.google && !document.querySelector('#google-maps-script')) {
       const script = document.createElement('script');
       script.id = 'google-maps-script';
@@ -267,7 +266,15 @@ export default function AddProperty() {
     }
   };
 
-  // CRITICAL FIX: Handle form submission with FormData
+  // FIXED: Safe price formatting with parseFloat
+  const formatPriceDisplay = (price) => {
+    const num = parseFloat(price);
+    if (isNaN(num)) return 'TSh 0';
+    if (num >= 1_000_000) return `TSh ${(num / 1_000_000).toFixed(1)}M`;
+    if (num >= 1_000) return `TSh ${(num / 1_000).toFixed(0)}K`;
+    return `TSh ${num.toLocaleString()}`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -275,7 +282,8 @@ export default function AddProperty() {
       toast('Jaza sehemu zote muhimu', 'error');
       return;
     }
-    if (form.price <= 0) {
+    const priceNum = parseFloat(form.price);
+    if (isNaN(priceNum) || priceNum <= 0) {
       toast('Bei lazima iwe kubwa kuliko sifuri', 'error');
       return;
     }
@@ -289,21 +297,17 @@ export default function AddProperty() {
     try {
       const fd = new FormData();
 
-      // Add form fields
       Object.entries(form).forEach(([k, v]) => {
         if (v !== undefined && v !== '') fd.append(k, v);
       });
 
-      // Add location data
       if (latitude) fd.append('latitude', latitude);
       if (longitude) fd.append('longitude', longitude);
       if (placeId) fd.append('place_id', placeId);
       if (formattedAddress) fd.append('formatted_address', formattedAddress);
 
-      // Add amenities
       amenities.forEach(a => fd.append('amenities', a));
 
-      // CRITICAL: Add image files
       if (images.length > 0) {
         images.forEach(img => {
           fd.append('images', img);
@@ -311,7 +315,6 @@ export default function AddProperty() {
         console.log(`📸 Adding ${images.length} new images to form`);
       }
 
-      // For edit: specify which existing images to keep
       if (isEdit && imagesToRemove.length > 0) {
         fd.append('remove_images', JSON.stringify(imagesToRemove));
       }
@@ -394,7 +397,6 @@ export default function AddProperty() {
             <p className="text-xs text-ink-6 mt-0.5">PNG, JPG, WEBP hadi 10MB kila moja</p>
           </label>
 
-          {/* Existing images (edit mode) */}
           {existingImages.length > 0 && (
             <div className="mt-3">
               <p className="text-xs font-semibold text-ink-5 mb-2">Picha zilizopo:</p>
@@ -415,7 +417,6 @@ export default function AddProperty() {
             </div>
           )}
 
-          {/* New image previews */}
           {previews.length > 0 && (
             <div className="mt-3">
               <p className="text-xs font-semibold text-ink-5 mb-2">Picha mpya:</p>
