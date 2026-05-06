@@ -8,6 +8,9 @@ const ALLOWED_UPDATE_FIELDS = new Set([
   'city', 'area', 'address', 'bedrooms', 'bathrooms', 'size_sqm', 'status', 'property_status'
 ]);
 
+// ============================================================
+// GET ALL PROPERTIES (with filters + images)
+// ============================================================
 exports.getProperties = async (req, res) => {
   try {
     let { type, city, price_min, price_max, price_type, search, premium, page = 1, limit = 20 } = req.query;
@@ -84,6 +87,9 @@ exports.getProperties = async (req, res) => {
   }
 };
 
+// ============================================================
+// GET SINGLE PROPERTY
+// ============================================================
 exports.getProperty = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -132,6 +138,9 @@ exports.getProperty = async (req, res) => {
   }
 };
 
+// ============================================================
+// GET MY PROPERTIES
+// ============================================================
 exports.getMyProperties = async (req, res) => {
   try {
     const [rows] = await db.execute(`
@@ -149,6 +158,9 @@ exports.getMyProperties = async (req, res) => {
   }
 };
 
+// ============================================================
+// CREATE PROPERTY
+// ============================================================
 exports.createProperty = async (req, res) => {
   try {
     const { title, description, type, price, price_type, city, area, address, bedrooms, bathrooms, size_sqm, amenities } = req.body;
@@ -196,14 +208,21 @@ exports.createProperty = async (req, res) => {
     ]);
 
     const pid = r.insertId;
+    console.log(`📝 Created property ID: ${pid}`);
 
     if (req.files && req.files.length) {
+      console.log(`📸 Saving ${req.files.length} images for property ${pid}`);
       for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i];
+        const imageUrl = `/uploads/properties/${file.filename}`;
         await db.execute(
           'INSERT INTO property_images (property_id, image_url, is_primary, sort_order) VALUES (?, ?, ?, ?)',
-          [pid, `/uploads/properties/${req.files[i].filename}`, i === 0 ? 1 : 0, i]
+          [pid, imageUrl, i === 0 ? 1 : 0, i]
         );
+        console.log(`   Image ${i + 1}: ${imageUrl}`);
       }
+    } else {
+      console.log(`⚠️ No images uploaded for property ${pid}`);
     }
 
     if (amenities) {
@@ -225,7 +244,7 @@ exports.createProperty = async (req, res) => {
 };
 
 // ============================================================
-// UPDATE PROPERTY - YOUR ORIGINAL WORKING VERSION (Restored)
+// UPDATE PROPERTY - SIMPLIFIED & FIXED
 // ============================================================
 exports.updateProperty = async (req, res) => {
   try {
@@ -234,56 +253,85 @@ exports.updateProperty = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ID si sahihi' });
     }
 
+    // Check if property exists
     const [rows] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
     if (!rows.length) {
       return res.status(404).json({ success: false, message: 'Mali haipatikani' });
     }
+
+    // Check authorization
     if (rows[0].owner_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Huna ruhusa' });
     }
 
-    const sets = [];
-    const vals = [];
-    for (const field of ALLOWED_UPDATE_FIELDS) {
-      if (req.body[field] !== undefined) {
-        if (field === 'type' && !ALLOWED_TYPES.has(req.body[field])) continue;
-        if (field === 'price_type' && !ALLOWED_PRICE_TYPES.has(req.body[field])) continue;
-        if (field === 'status' && !ALLOWED_STATUSES.has(req.body[field])) continue;
-        if (field === 'price' && isNaN(parseFloat(req.body[field]))) continue;
-        sets.push(`${field} = ?`);
-        vals.push(req.body[field]);
+    // Build update query - only update fields that are sent
+    const updates = [];
+    const values = [];
+    
+    // Allowed fields for update
+    const allowedFields = [
+      'title', 'description', 'type', 'price', 'price_type',
+      'city', 'area', 'address', 'bedrooms', 'bathrooms', 
+      'size_sqm', 'property_status', 'latitude', 'longitude',
+      'place_id', 'formatted_address'
+    ];
+    
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined && req.body[field] !== '') {
+        updates.push(`${field} = ?`);
+        values.push(req.body[field]);
       }
     }
 
-    if (req.body.latitude !== undefined) { sets.push('latitude = ?'); vals.push(req.body.latitude || null); }
-    if (req.body.longitude !== undefined) { sets.push('longitude = ?'); vals.push(req.body.longitude || null); }
-    if (req.body.place_id !== undefined) { sets.push('place_id = ?'); vals.push(req.body.place_id || null); }
-    if (req.body.formatted_address !== undefined) { sets.push('formatted_address = ?'); vals.push(req.body.formatted_address || null); }
-
-    if (!sets.length) {
+    if (updates.length === 0) {
       return res.status(400).json({ success: false, message: 'Hakuna mabadiliko' });
     }
 
-    vals.push(id);
-    await db.execute(`UPDATE properties SET ${sets.join(', ')} WHERE id = ?`, vals);
+    values.push(id);
+    await db.execute(`UPDATE properties SET ${updates.join(', ')} WHERE id = ?`, values);
 
-    if (req.files && req.files.length) {
+    // Handle new images if uploaded
+    if (req.files && req.files.length > 0) {
       for (let i = 0; i < req.files.length; i++) {
+        const imageUrl = `/uploads/properties/${req.files[i].filename}`;
         await db.execute(
           'INSERT INTO property_images (property_id, image_url, is_primary, sort_order) VALUES (?, ?, ?, ?)',
-          [id, `/uploads/properties/${req.files[i].filename}`, 0, i]
+          [id, imageUrl, 0, i]
         );
       }
     }
 
-    const [u] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
-    res.json({ success: true, data: u[0], message: 'Tangazo limesasishwa!' });
+    // Handle image removal if specified
+    if (req.body.remove_images) {
+      try {
+        const toRemove = typeof req.body.remove_images === 'string' 
+          ? JSON.parse(req.body.remove_images) 
+          : req.body.remove_images;
+        
+        if (Array.isArray(toRemove) && toRemove.length > 0) {
+          for (const imgId of toRemove) {
+            await db.execute('DELETE FROM property_images WHERE id = ? AND property_id = ?', [imgId, id]);
+          }
+        }
+      } catch (e) {
+        console.log('Error parsing remove_images:', e.message);
+      }
+    }
+
+    const [updated] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
+    console.log(`✅ Update completed for property ${id}`);
+    res.json({ success: true, data: updated[0], message: 'Tangazo limesasishwa!' });
+    
   } catch (e) {
     console.error('updateProperty error:', e.message);
+    console.error('Stack:', e.stack);
     res.status(500).json({ success: false, message: 'Hitilafu ya seva', error: e.message });
   }
 };
 
+// ============================================================
+// DELETE PROPERTY
+// ============================================================
 exports.deleteProperty = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -307,6 +355,9 @@ exports.deleteProperty = async (req, res) => {
   }
 };
 
+// ============================================================
+// BOOST PROPERTY
+// ============================================================
 exports.boostProperty = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -330,6 +381,9 @@ exports.boostProperty = async (req, res) => {
   }
 };
 
+// ============================================================
+// UPDATE PROPERTY STATUS (available/sold/rented/pending)
+// ============================================================
 exports.updatePropertyStatus = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
