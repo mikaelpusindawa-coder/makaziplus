@@ -8,7 +8,7 @@ const ALLOWED_ADMIN_PLANS = new Set(['basic', 'pro', 'admin']);
 const ALLOWED_PROP_STATUSES = new Set(['active', 'inactive', 'pending', 'rejected', 'suspended']);
 
 // ============================================================
-// MESSAGES / CHAT (YOUR ORIGINAL WORKING CODE)
+// MESSAGES / CHAT
 // ============================================================
 
 exports.getConversations = async (req, res) => {
@@ -94,10 +94,11 @@ exports.sendMessage = async (req, res) => {
     }
     
     const safePropId = property_id ? parseInt(property_id) : null;
+    const trimmedMessage = message.trim();
     
     const [result] = await db.execute(
       'INSERT INTO messages (from_user_id, to_user_id, property_id, message, created_at) VALUES (?, ?, ?, ?, NOW())',
-      [fromUserId, toUserId, safePropId, message.trim()]
+      [fromUserId, toUserId, safePropId, trimmedMessage]
     );
     
     const [newMessage] = await db.execute(
@@ -126,21 +127,20 @@ exports.getUnreadCount = async (req, res) => {
 };
 
 // ============================================================
-// FAVORITES (YOUR ORIGINAL WORKING CODE)
+// FAVORITES
 // ============================================================
 
 exports.getFavorites = async (req, res) => {
   try {
-    const [rows] = await db.execute(
-      `SELECT p.*, u.name AS owner_name, u.verified AS owner_verified,
-              (SELECT image_url FROM property_images WHERE property_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image
-       FROM favorites f
-       JOIN properties p ON p.id = f.property_id
-       JOIN users u ON u.id = p.owner_id
-       WHERE f.user_id = ?
-       ORDER BY f.created_at DESC`,
-      [req.user.id]
-    );
+    const [rows] = await db.execute(`
+      SELECT p.*, u.name AS owner_name, u.verified AS owner_verified,
+             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image
+      FROM favorites f
+      JOIN properties p ON p.id = f.property_id
+      JOIN users u ON u.id = p.owner_id
+      WHERE f.user_id = ?
+      ORDER BY f.created_at DESC
+    `, [req.user.id]);
     res.json({ success: true, data: rows });
   } catch (e) {
     console.error('getFavorites error:', e.message);
@@ -192,7 +192,7 @@ exports.checkFavorite = async (req, res) => {
 };
 
 // ============================================================
-// NOTIFICATIONS (YOUR ORIGINAL WORKING CODE)
+// NOTIFICATIONS
 // ============================================================
 
 exports.getNotifications = async (req, res) => {
@@ -238,7 +238,7 @@ exports.markAllRead = async (req, res) => {
 };
 
 // ============================================================
-// REVIEWS (YOUR ORIGINAL WORKING CODE)
+// REVIEWS (PROPERTY REVIEWS)
 // ============================================================
 
 exports.createReview = async (req, res) => {
@@ -269,7 +269,7 @@ exports.createReview = async (req, res) => {
 };
 
 // ============================================================
-// PAYMENTS (YOUR ORIGINAL WORKING CODE)
+// PAYMENTS
 // ============================================================
 
 exports.initiatePayment = async (req, res) => {
@@ -341,7 +341,7 @@ exports.getPaymentHistory = async (req, res) => {
 };
 
 // ============================================================
-// USER RATINGS (YOUR ORIGINAL WORKING CODE)
+// USER RATINGS (Rate Agents/Owners)
 // ============================================================
 
 exports.createUserRating = async (req, res) => {
@@ -392,40 +392,96 @@ exports.getUserRatings = async (req, res) => {
 };
 
 // ============================================================
-// BOOKINGS (YOUR ORIGINAL WORKING CODE)
+// BOOKINGS - WITH CONCURRENCY LOCK (FIXED)
 // ============================================================
 
 exports.createBooking = async (req, res) => {
   try {
     const { property_id, check_in_date, check_out_date, guests, special_requests } = req.body;
     const propId = parseInt(property_id);
-    if (!propId || isNaN(propId))
+
+    if (!propId || isNaN(propId)) {
       return res.status(400).json({ success: false, message: 'Property ID si sahihi' });
+    }
+
     const checkIn = new Date(check_in_date);
     const checkOut = new Date(check_out_date);
-    if (isNaN(checkIn) || isNaN(checkOut) || checkOut <= checkIn)
-      return res.status(400).json({ success: false, message: 'Dates si sahihi' });
+    if (isNaN(checkIn) || isNaN(checkOut) || checkOut <= checkIn) {
+      return res.status(400).json({ success: false, message: 'Tarehe si sahihi' });
+    }
+
     const guestsNum = parseInt(guests) || 1;
-    if (guestsNum < 1 || guestsNum > 20)
+    if (guestsNum < 1 || guestsNum > 20) {
       return res.status(400).json({ success: false, message: 'Idadi ya wageni si sahihi' });
-    const [prop] = await db.execute('SELECT owner_id, price FROM properties WHERE id = ? AND status = ?', [propId, 'active']);
-    if (!prop.length)
-      return res.status(404).json({ success: false, message: 'Mali haipatikani' });
-    const days = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-    const totalAmount = parseFloat(prop[0].price) * days;
-    const [r] = await db.execute(
-      `INSERT INTO bookings (property_id, user_id, owner_id, check_in_date, check_out_date, guests, total_amount, special_requests, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-      [propId, req.user.id, prop[0].owner_id, checkIn, checkOut, guestsNum, totalAmount, special_requests || null]
-    );
-    await db.execute(
-      `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [prop[0].owner_id, 'Booking Request Received 📅',
-       `${req.user.name} wants to book your property for ${days} day(s). Total: TSh ${totalAmount.toLocaleString()}`,
-       'system', r.insertId, 'booking']
-    );
-    res.status(201).json({ success: true, booking_id: r.insertId, total_amount: totalAmount, message: 'Booking request sent!' });
+    }
+
+    // Get a database connection for transaction
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // Lock the property row to prevent concurrent bookings
+      const [prop] = await connection.execute(
+        'SELECT id, owner_id, price, status FROM properties WHERE id = ? AND status = "active" FOR UPDATE',
+        [propId]
+      );
+
+      if (!prop.length) {
+        await connection.rollback();
+        connection.release();
+        return res.status(404).json({ success: false, message: 'Mali haipatikani' });
+      }
+
+      // Check for overlapping bookings with row lock
+      const [overlapping] = await connection.execute(
+        `SELECT id, status FROM bookings 
+         WHERE property_id = ? 
+           AND status IN ('pending', 'confirmed')
+           AND (
+             (check_in_date <= ? AND check_out_date >= ?)
+             OR (check_in_date <= ? AND check_out_date >= ?)
+             OR (check_in_date BETWEEN ? AND ?)
+             OR (check_out_date BETWEEN ? AND ?)
+           )
+         LIMIT 1 FOR UPDATE`,
+        [propId, check_out_date, check_in_date, check_in_date, check_out_date, check_in_date, check_out_date, check_in_date, check_out_date]
+      );
+
+      if (overlapping.length > 0) {
+        await connection.rollback();
+        connection.release();
+        return res.status(409).json({ 
+          success: false, 
+          message: 'Tarehe zilizochaguliwa tayari zimehifadhiwa. Tafadhali chagua tarehe nyingine.' 
+        });
+      }
+
+      const days = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+      const totalAmount = parseFloat(prop[0].price) * days;
+
+      const [r] = await connection.execute(
+        `INSERT INTO bookings (property_id, user_id, owner_id, check_in_date, check_out_date, guests, total_amount, special_requests, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+        [propId, req.user.id, prop[0].owner_id, checkIn, checkOut, guestsNum, totalAmount, special_requests || null]
+      );
+
+      await connection.execute(
+        `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+        [prop[0].owner_id, 'Booking Request Received 📅', 
+         `${req.user.name} wants to book your property for ${days} day(s). Total: TSh ${totalAmount.toLocaleString()}`,
+         'system', r.insertId, 'booking']
+      );
+
+      await connection.commit();
+      connection.release();
+
+      res.status(201).json({ success: true, booking_id: r.insertId, total_amount: totalAmount, message: 'Booking request sent!' });
+    } catch (txnError) {
+      await connection.rollback();
+      connection.release();
+      throw txnError;
+    }
   } catch (e) {
     console.error('createBooking error:', e.message);
     res.status(500).json({ success: false, message: 'Hitilafu ya seva', error: e.message });
@@ -434,17 +490,16 @@ exports.createBooking = async (req, res) => {
 
 exports.getMyBookings = async (req, res) => {
   try {
-    const [bookings] = await db.execute(
-      `SELECT b.*, p.title, p.area, p.city, p.price,
-              (SELECT image_url FROM property_images WHERE property_id = p.id AND is_primary = 1 LIMIT 1) AS property_image,
-              u.name AS owner_name, u.phone AS owner_phone
-       FROM bookings b
-       JOIN properties p ON p.id = b.property_id
-       JOIN users u ON u.id = b.owner_id
-       WHERE b.user_id = ?
-       ORDER BY b.created_at DESC`,
-      [req.user.id]
-    );
+    const [bookings] = await db.execute(`
+      SELECT b.*, p.title, p.area, p.city, p.price,
+             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_primary = 1 LIMIT 1) AS property_image,
+             u.name AS owner_name, u.phone AS owner_phone
+      FROM bookings b
+      JOIN properties p ON p.id = b.property_id
+      JOIN users u ON u.id = b.owner_id
+      WHERE b.user_id = ?
+      ORDER BY b.created_at DESC
+    `, [req.user.id]);
     res.json({ success: true, data: bookings });
   } catch (e) {
     console.error('getMyBookings error:', e.message);
@@ -457,14 +512,13 @@ exports.getPropertyBookings = async (req, res) => {
     const propId = parseInt(req.params.propertyId);
     if (!propId || isNaN(propId))
       return res.status(400).json({ success: false, message: 'ID si sahihi' });
-    const [bookings] = await db.execute(
-      `SELECT b.*, u.name AS user_name, u.email AS user_email, u.phone AS user_phone
-       FROM bookings b
-       JOIN users u ON u.id = b.user_id
-       WHERE b.property_id = ? AND b.owner_id = ?
-       ORDER BY b.created_at DESC`,
-      [propId, req.user.id]
-    );
+    const [bookings] = await db.execute(`
+      SELECT b.*, u.name AS user_name, u.email AS user_email, u.phone AS user_phone
+      FROM bookings b
+      JOIN users u ON u.id = b.user_id
+      WHERE b.property_id = ? AND b.owner_id = ?
+      ORDER BY b.created_at DESC
+    `, [propId, req.user.id]);
     res.json({ success: true, data: bookings });
   } catch (e) {
     console.error('getPropertyBookings error:', e.message);
@@ -503,67 +557,7 @@ exports.updateBookingStatus = async (req, res) => {
 };
 
 // ============================================================
-// VERIFICATION (YOUR ORIGINAL WORKING CODE)
-// ============================================================
-
-exports.submitVerification = async (req, res) => {
-  try {
-    const { id_type, id_number } = req.body;
-    if (!id_type || !id_number)
-      return res.status(400).json({ success: false, message: 'Jaza taarifa zote' });
-    const validTypes = ['nida', 'passport', 'driving_license', 'tin'];
-    if (!validTypes.includes(id_type))
-      return res.status(400).json({ success: false, message: 'Aina ya kitambulisho si sahihi' });
-    if (id_type === 'nida' && !/^\d{20}$/.test(id_number))
-      return res.status(400).json({ success: false, message: 'NIDA lazima iwe na tarakimu 20' });
-    if (id_type === 'passport' && (!/^[A-Z]{2}\d{7}$/.test(id_number) && !/^\d{8,9}$/.test(id_number)))
-      return res.status(400).json({ success: false, message: 'Nambari ya pasipoti si sahihi' });
-    const [existing] = await db.execute('SELECT id FROM verification_requests WHERE user_id = ?', [req.user.id]);
-    if (existing.length) {
-      await db.execute(
-        `UPDATE verification_requests SET id_type = ?, id_number = ?, status = 'pending', updated_at = NOW()
-         WHERE user_id = ?`,
-        [id_type, id_number, req.user.id]
-      );
-    } else {
-      await db.execute(
-        `INSERT INTO verification_requests (user_id, id_type, id_number, status, created_at)
-         VALUES (?, ?, ?, 'pending', NOW())`,
-        [req.user.id, id_type, id_number]
-      );
-    }
-    await db.execute(
-      `INSERT INTO notifications (user_id, title, body, type, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
-      [req.user.id, 'Verification Submitted 📋',
-       `Your ${id_type.toUpperCase()} verification request has been submitted. We'll review it within 24 hours.`,
-       'system']
-    );
-    res.json({ success: true, message: 'Verification request submitted!' });
-  } catch (e) {
-    console.error('submitVerification error:', e.message);
-    res.status(500).json({ success: false, message: 'Hitilafu ya seva' });
-  }
-};
-
-exports.getVerificationStatus = async (req, res) => {
-  try {
-    const [verification] = await db.execute(
-      `SELECT v.*, u.verified, u.is_verified
-       FROM verification_requests v
-       RIGHT JOIN users u ON u.id = v.user_id
-       WHERE u.id = ?`,
-      [req.user.id]
-    );
-    res.json({ success: true, data: verification[0] || { verified: false, is_verified: false } });
-  } catch (e) {
-    console.error('getVerificationStatus error:', e.message);
-    res.status(500).json({ success: false, message: 'Hitilafu ya seva' });
-  }
-};
-
-// ============================================================
-// USER SETTINGS (YOUR ORIGINAL WORKING CODE)
+// USER SETTINGS - WITH LANGUAGE SUPPORT FOR i18n
 // ============================================================
 
 exports.getUserSettings = async (req, res) => {
@@ -571,8 +565,8 @@ exports.getUserSettings = async (req, res) => {
     const [settings] = await db.execute(`SELECT * FROM user_settings WHERE user_id = ?`, [req.user.id]);
     if (!settings.length) {
       await db.execute(
-        `INSERT INTO user_settings (user_id, email_notifications, sms_notifications, push_notifications)
-         VALUES (?, 1, 1, 1)`,
+        `INSERT INTO user_settings (user_id, email_notifications, sms_notifications, push_notifications, language)
+         VALUES (?, 1, 1, 1, 'sw')`,
         [req.user.id]
       );
       return res.json({ success: true, data: { email_notifications: 1, sms_notifications: 1, push_notifications: 1, language: 'sw', theme: 'light' } });
@@ -610,7 +604,7 @@ exports.updateUserSettings = async (req, res) => {
 };
 
 // ============================================================
-// HELP CENTER (YOUR ORIGINAL WORKING CODE)
+// HELP CENTER
 // ============================================================
 
 exports.getFaqs = async (req, res) => {
@@ -657,16 +651,126 @@ exports.getSupportTickets = async (req, res) => {
 };
 
 // ============================================================
-// ADMIN FUNCTIONS - FIXED: getAdminStats now works with your database
+// PRIVACY & TERMS
+// ============================================================
+
+exports.getPrivacyPolicy = async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      title: 'Sera ya Faragha',
+      last_updated: '2025-01-01',
+      content: `MakaziPlus inaheshimu faragha yako. Tunakusanya taarifa zako za msingi (jina, barua pepe, namba ya simu) kwa ajili ya kutoa huduma zetu. Hatutashiriki taarifa zako na watu wengine bila idhini yako. Una haki ya kuomba taarifa zako zifutwe wakati wowote.`
+    }
+  });
+};
+
+exports.getTermsOfService = async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      title: 'Masharti ya Matumizi',
+      last_updated: '2025-01-01',
+      content: `Kwa kutumia MakaziPlus, unakubali kuwa taarifa zako ni sahihi. Wateja wanawajibika kuthibitisha taarifa za mali kabla ya kufanya maamuzi. MakaziPlus haihusiki na miamala kati ya wateja na wauzaji.`
+    }
+  });
+};
+
+// ============================================================
+// VERIFICATION (DOCUMENT UPLOAD)
+// ============================================================
+
+exports.submitVerification = async (req, res) => {
+  try {
+    const { id_type, id_number, phone_number } = req.body;
+    
+    if (!id_type || !id_number) {
+      return res.status(400).json({ success: false, message: 'Jaza taarifa zote' });
+    }
+    
+    const validTypes = ['nida', 'passport', 'driving_license', 'tin'];
+    if (!validTypes.includes(id_type)) {
+      return res.status(400).json({ success: false, message: 'Aina ya kitambulisho si sahihi' });
+    }
+    
+    if (id_type === 'nida' && !/^\d{20}$/.test(id_number)) {
+      return res.status(400).json({ success: false, message: 'NIDA lazima iwe na tarakimu 20' });
+    }
+    
+    if (id_type === 'passport' && (!/^[A-Z]{2}\d{7}$/.test(id_number) && !/^\d{8,9}$/.test(id_number))) {
+      return res.status(400).json({ success: false, message: 'Nambari ya pasipoti si sahihi' });
+    }
+    
+    let idDocumentFront = null;
+    let idDocumentBack = null;
+    let selfieUrl = null;
+    
+    if (req.files) {
+      if (req.files['id_document_front'] && req.files['id_document_front'][0]) {
+        idDocumentFront = `/uploads/verifications/${req.files['id_document_front'][0].filename}`;
+      }
+      if (req.files['id_document_back'] && req.files['id_document_back'][0]) {
+        idDocumentBack = `/uploads/verifications/${req.files['id_document_back'][0].filename}`;
+      }
+      if (req.files['selfie'] && req.files['selfie'][0]) {
+        selfieUrl = `/uploads/verifications/${req.files['selfie'][0].filename}`;
+      }
+    }
+    
+    const [existing] = await db.execute('SELECT id FROM verification_requests WHERE user_id = ?', [req.user.id]);
+    
+    if (existing.length) {
+      await db.execute(
+        `UPDATE verification_requests 
+         SET id_type = ?, id_number = ?, id_document_front = ?, id_document_back = ?, selfie_url = ?, status = 'pending', updated_at = NOW()
+         WHERE user_id = ?`,
+        [id_type, id_number, idDocumentFront, idDocumentBack, selfieUrl, req.user.id]
+      );
+    } else {
+      await db.execute(
+        `INSERT INTO verification_requests (user_id, id_type, id_number, id_document_front, id_document_back, selfie_url, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+        [req.user.id, id_type, id_number, idDocumentFront, idDocumentBack, selfieUrl]
+      );
+    }
+    
+    await db.execute(
+      `INSERT INTO notifications (user_id, title, body, type, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [req.user.id, 'Verification Submitted 📋', `Your ${id_type.toUpperCase()} verification request has been submitted. We'll review it within 24 hours.`, 'system']
+    );
+    
+    res.json({ success: true, message: 'Verification request submitted!' });
+  } catch (e) {
+    console.error('submitVerification error:', e.message);
+    res.status(500).json({ success: false, message: 'Hitilafu ya seva' });
+  }
+};
+
+exports.getVerificationStatus = async (req, res) => {
+  try {
+    const [verification] = await db.execute(
+      `SELECT v.*, u.verified, u.is_verified
+       FROM verification_requests v
+       RIGHT JOIN users u ON u.id = v.user_id
+       WHERE u.id = ?`,
+      [req.user.id]
+    );
+    res.json({ success: true, data: verification[0] || { verified: false, is_verified: false } });
+  } catch (e) {
+    console.error('getVerificationStatus error:', e.message);
+    res.status(500).json({ success: false, message: 'Hitilafu ya seva' });
+  }
+};
+
+// ============================================================
+// ADMIN FUNCTIONS
 // ============================================================
 
 exports.getAdminStats = async (req, res) => {
   try {
-    console.log('getAdminStats called by user:', req.user?.id);
-    
     const [usersCount] = await db.execute('SELECT COUNT(*) as total FROM users WHERE deleted_at IS NULL');
     const [propsCount] = await db.execute('SELECT COUNT(*) as total FROM properties');
-    // FIXED: Use 'status' column instead of 'active' - your database has 'status' not 'active'
     const [activeProps] = await db.execute('SELECT COUNT(*) as total FROM properties WHERE status = "active"');
     const [revenue] = await db.execute('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = "completed"');
     const [views] = await db.execute('SELECT COALESCE(SUM(views), 0) as total FROM properties');
@@ -693,15 +797,7 @@ exports.getAdminStats = async (req, res) => {
 
 exports.getAdminUsers = async (req, res) => {
   try {
-    console.log('getAdminUsers called by user:', req.user?.id);
-    
-    const [users] = await db.execute(`
-      SELECT id, name, email, phone, role, plan, verified, is_active, created_at, is_verified
-      FROM users
-      WHERE deleted_at IS NULL
-      ORDER BY created_at DESC
-    `);
-    
+    const [users] = await db.execute(`SELECT id, name, email, phone, role, plan, verified, is_active, created_at, is_verified FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC`);
     res.json({ success: true, data: users });
   } catch (error) {
     console.error('getAdminUsers error:', error.message);
@@ -712,55 +808,22 @@ exports.getAdminUsers = async (req, res) => {
 exports.updateAdminUser = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    if (isNaN(userId)) {
-      return res.status(400).json({ success: false, message: 'User ID si sahihi' });
-    }
-    
-    if (userId === req.user.id) {
-      return res.status(400).json({ success: false, message: 'Huwezi kubadilisha akaunti yako mwenyewe hapa' });
-    }
+    if (isNaN(userId)) return res.status(400).json({ success: false, message: 'User ID si sahihi' });
+    if (userId === req.user.id) return res.status(400).json({ success: false, message: 'Huwezi kubadilisha akaunti yako mwenyewe hapa' });
     
     const { verified, is_active, role, plan, is_verified } = req.body;
-    const updates = [];
-    const values = [];
+    const updates = [], values = [];
     
-    if (verified !== undefined) {
-      updates.push('verified = ?');
-      values.push(verified ? 1 : 0);
-    }
-    if (is_active !== undefined) {
-      updates.push('is_active = ?');
-      values.push(is_active ? 1 : 0);
-    }
-    if (is_verified !== undefined) {
-      updates.push('is_verified = ?');
-      values.push(is_verified ? 1 : 0);
-    }
-    if (role !== undefined) {
-      const allowedRoles = ['customer', 'agent', 'owner', 'admin'];
-      if (!allowedRoles.includes(role)) {
-        return res.status(400).json({ success: false, message: 'Jukumu si sahihi' });
-      }
-      updates.push('role = ?');
-      values.push(role);
-    }
-    if (plan !== undefined) {
-      const allowedPlans = ['basic', 'pro', 'admin'];
-      if (!allowedPlans.includes(plan)) {
-        return res.status(400).json({ success: false, message: 'Mpango si sahihi' });
-      }
-      updates.push('plan = ?');
-      values.push(plan);
-    }
+    if (verified !== undefined) { updates.push('verified = ?'); values.push(verified ? 1 : 0); }
+    if (is_active !== undefined) { updates.push('is_active = ?'); values.push(is_active ? 1 : 0); }
+    if (is_verified !== undefined) { updates.push('is_verified = ?'); values.push(is_verified ? 1 : 0); }
+    if (role !== undefined && ['customer', 'agent', 'owner', 'admin'].includes(role)) { updates.push('role = ?'); values.push(role); }
+    if (plan !== undefined && ['basic', 'pro', 'admin'].includes(plan)) { updates.push('plan = ?'); values.push(plan); }
     
-    if (updates.length === 0) {
-      return res.status(400).json({ success: false, message: 'Hakuna mabadiliko' });
-    }
+    if (updates.length === 0) return res.status(400).json({ success: false, message: 'Hakuna mabadiliko' });
     
     values.push(userId);
-    const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
-    await db.execute(query, values);
-    
+    await db.execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
     res.json({ success: true, message: 'Mtumiaji amebadilishwa' });
   } catch (error) {
     console.error('updateAdminUser error:', error.message);
@@ -770,16 +833,7 @@ exports.updateAdminUser = async (req, res) => {
 
 exports.getAdminPayments = async (req, res) => {
   try {
-    console.log('getAdminPayments called by user:', req.user?.id);
-    
-    const [payments] = await db.execute(`
-      SELECT p.*, u.name as user_name, u.email as user_email
-      FROM payments p
-      JOIN users u ON u.id = p.user_id
-      ORDER BY p.created_at DESC
-      LIMIT 100
-    `);
-    
+    const [payments] = await db.execute(`SELECT p.*, u.name as user_name, u.email as user_email FROM payments p JOIN users u ON u.id = p.user_id ORDER BY p.created_at DESC LIMIT 100`);
     res.json({ success: true, data: payments });
   } catch (error) {
     console.error('getAdminPayments error:', error.message);
@@ -790,19 +844,14 @@ exports.getAdminPayments = async (req, res) => {
 exports.moderateProperty = async (req, res) => {
   try {
     const propId = parseInt(req.params.id);
-    if (isNaN(propId)) {
-      return res.status(400).json({ success: false, message: 'ID si sahihi' });
-    }
+    if (isNaN(propId)) return res.status(400).json({ success: false, message: 'ID si sahihi' });
     
     const { status } = req.body;
-    const allowedStatuses = ['active', 'inactive', 'pending', 'rejected', 'suspended'];
-    
-    if (!status || !allowedStatuses.includes(status)) {
+    if (!status || !ALLOWED_PROP_STATUSES.has(status)) {
       return res.status(400).json({ success: false, message: 'Hali si sahihi' });
     }
     
     await db.execute('UPDATE properties SET status = ? WHERE id = ?', [status, propId]);
-    
     res.json({ success: true, message: 'Hali ya tangazo imebadilishwa' });
   } catch (error) {
     console.error('moderateProperty error:', error.message);
@@ -813,13 +862,8 @@ exports.moderateProperty = async (req, res) => {
 exports.softDeleteUser = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    if (isNaN(userId)) {
-      return res.status(400).json({ success: false, message: 'ID si sahihi' });
-    }
-    
-    if (userId === req.user.id) {
-      return res.status(400).json({ success: false, message: 'Huwezi kufuta akaunti yako mwenyewe' });
-    }
+    if (isNaN(userId)) return res.status(400).json({ success: false, message: 'ID si sahihi' });
+    if (userId === req.user.id) return res.status(400).json({ success: false, message: 'Huwezi kufuta akaunti yako mwenyewe' });
     
     await db.execute('UPDATE users SET deleted_at = NOW(), is_active = 0 WHERE id = ?', [userId]);
     res.json({ success: true, message: 'Mtumiaji amefutwa' });
@@ -832,49 +876,21 @@ exports.softDeleteUser = async (req, res) => {
 exports.getSecurityAlerts = async (req, res) => {
   try {
     const [alerts] = await db.execute(`
-      SELECT ip_address, COUNT(*) as attempt_count,
-             COUNT(DISTINCT identifier) as unique_identifiers,
-             MIN(created_at) as first_attempt,
-             MAX(created_at) as last_attempt
+      SELECT ip_address, COUNT(*) as attempt_count, COUNT(DISTINCT identifier) as unique_identifiers,
+             MIN(created_at) as first_attempt, MAX(created_at) as last_attempt
       FROM login_attempts
-      WHERE success = 0
-        AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-      GROUP BY ip_address
-      HAVING attempt_count >= 3
-      ORDER BY attempt_count DESC
-      LIMIT 50
+      WHERE success = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+      GROUP BY ip_address HAVING attempt_count >= 3 ORDER BY attempt_count DESC LIMIT 50
     `);
     
-    const alertsWithLevel = alerts.map(alert => ({
-      ...alert,
-      threat_level: alert.attempt_count >= 20 ? 'CRITICAL' :
-                    alert.attempt_count >= 10 ? 'HIGH' :
-                    alert.attempt_count >= 5 ? 'MEDIUM' : 'LOW'
-    }));
+    const alertsWithLevel = alerts.map(alert => ({ ...alert, threat_level: alert.attempt_count >= 20 ? 'CRITICAL' : alert.attempt_count >= 10 ? 'HIGH' : alert.attempt_count >= 5 ? 'MEDIUM' : 'LOW' }));
     
-    const [blockedIps] = await db.execute(`
-      SELECT * FROM blocked_ips
-      WHERE expires_at IS NULL OR expires_at > NOW()
-      ORDER BY blocked_at DESC
-      LIMIT 50
-    `);
-    
+    const [blockedIps] = await db.execute(`SELECT * FROM blocked_ips WHERE expires_at IS NULL OR expires_at > NOW() ORDER BY blocked_at DESC LIMIT 50`);
     const [failed1h] = await db.execute(`SELECT COUNT(*) as count FROM login_attempts WHERE success = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)`);
     const [failed24h] = await db.execute(`SELECT COUNT(*) as count FROM login_attempts WHERE success = 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`);
     const [lockedAccounts] = await db.execute(`SELECT COUNT(*) as count FROM users WHERE locked_until > NOW()`);
     
-    res.json({
-      success: true,
-      data: {
-        alerts: alertsWithLevel,
-        blocked_ips: blockedIps,
-        counts: {
-          failed_1h: failed1h[0].count,
-          failed_24h: failed24h[0].count,
-          locked_accounts: lockedAccounts[0].count
-        }
-      }
-    });
+    res.json({ success: true, data: { alerts: alertsWithLevel, blocked_ips: blockedIps, counts: { failed_1h: failed1h[0].count, failed_24h: failed24h[0].count, locked_accounts: lockedAccounts[0].count } } });
   } catch (error) {
     console.error('getSecurityAlerts error:', error.message);
     res.status(500).json({ success: false, message: error.message });
@@ -884,19 +900,10 @@ exports.getSecurityAlerts = async (req, res) => {
 exports.blockIp = async (req, res) => {
   try {
     const { ip_address, reason, expires_hours } = req.body;
-    if (!ip_address || !reason) {
-      return res.status(400).json({ success: false, message: 'ip_address na reason zinahitajika' });
-    }
+    if (!ip_address || !reason) return res.status(400).json({ success: false, message: 'ip_address na reason zinahitajika' });
     
     const expiresAt = expires_hours ? new Date(Date.now() + parseInt(expires_hours) * 3600000) : null;
-    
-    await db.execute(
-      `INSERT INTO blocked_ips (ip_address, reason, blocked_by, expires_at, blocked_at)
-       VALUES (?, ?, ?, ?, NOW())
-       ON DUPLICATE KEY UPDATE reason = VALUES(reason), blocked_by = VALUES(blocked_by), expires_at = VALUES(expires_at)`,
-      [ip_address.trim(), reason.trim(), req.user.id, expiresAt]
-    );
-    
+    await db.execute(`INSERT INTO blocked_ips (ip_address, reason, blocked_by, expires_at, blocked_at) VALUES (?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE reason = VALUES(reason), blocked_by = VALUES(blocked_by), expires_at = VALUES(expires_at)`, [ip_address.trim(), reason.trim(), req.user.id, expiresAt]);
     res.json({ success: true, message: `IP ${ip_address} imefungwa` });
   } catch (error) {
     console.error('blockIp error:', error.message);
@@ -905,7 +912,7 @@ exports.blockIp = async (req, res) => {
 };
 
 // ============================================================
-// VERIFICATION ADMIN (YOUR ORIGINAL WORKING CODE)
+// VERIFICATION ADMIN
 // ============================================================
 
 exports.getPendingVerifications = async (req, res) => {
@@ -942,16 +949,10 @@ exports.getAllVerificationRequests = async (req, res) => {
 exports.approveVerification = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    if (isNaN(userId)) {
-      return res.status(400).json({ success: false, message: 'ID si sahihi' });
-    }
+    if (isNaN(userId)) return res.status(400).json({ success: false, message: 'ID si sahihi' });
     
-    await db.execute(
-      `UPDATE verification_requests SET status = 'approved', reviewed_by = ?, reviewed_at = NOW() WHERE user_id = ?`,
-      [req.user.id, userId]
-    );
+    await db.execute(`UPDATE verification_requests SET status = 'approved', reviewed_by = ?, reviewed_at = NOW() WHERE user_id = ?`, [req.user.id, userId]);
     await db.execute(`UPDATE users SET verified = 1, is_verified = 1 WHERE id = ?`, [userId]);
-    
     res.json({ success: true, message: 'Verification approved!' });
   } catch (error) {
     console.error('approveVerification error:', error.message);
@@ -963,16 +964,9 @@ exports.rejectVerification = async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     const { reason } = req.body;
+    if (isNaN(userId)) return res.status(400).json({ success: false, message: 'ID si sahihi' });
     
-    if (isNaN(userId)) {
-      return res.status(400).json({ success: false, message: 'ID si sahihi' });
-    }
-    
-    await db.execute(
-      `UPDATE verification_requests SET status = 'rejected', admin_notes = ?, reviewed_by = ?, reviewed_at = NOW() WHERE user_id = ?`,
-      [reason || 'No reason provided', req.user.id, userId]
-    );
-    
+    await db.execute(`UPDATE verification_requests SET status = 'rejected', admin_notes = ?, reviewed_by = ?, reviewed_at = NOW() WHERE user_id = ?`, [reason || 'No reason provided', req.user.id, userId]);
     res.json({ success: true, message: 'Verification rejected' });
   } catch (error) {
     console.error('rejectVerification error:', error.message);
@@ -981,22 +975,21 @@ exports.rejectVerification = async (req, res) => {
 };
 
 // ============================================================
-// PROPERTY SORTING & RECENT (YOUR ORIGINAL WORKING CODE)
+// PROPERTY SORTING & RECENT
 // ============================================================
 
 exports.getRecentProperties = async (req, res) => {
   try {
     const limit = Math.min(10, parseInt(req.query.limit) || 4);
-    const [properties] = await db.execute(
-      `SELECT p.*, u.name AS owner_name, u.verified AS owner_verified,
-              (SELECT image_url FROM property_images WHERE property_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image
-       FROM properties p
-       JOIN users u ON u.id = p.owner_id
-       WHERE p.status = 'active'
-       ORDER BY p.created_at DESC
-       LIMIT ?`,
-      [limit]
-    );
+    const [properties] = await db.execute(`
+      SELECT p.*, u.name AS owner_name, u.verified AS owner_verified,
+             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image
+      FROM properties p
+      JOIN users u ON u.id = p.owner_id
+      WHERE p.status = 'active'
+      ORDER BY p.created_at DESC
+      LIMIT ?
+    `, [limit]);
     res.json({ success: true, data: properties });
   } catch (e) {
     console.error('getRecentProperties error:', e.message);
@@ -1014,35 +1007,13 @@ exports.getPropertiesWithSort = async (req, res) => {
     const where = ['p.status = ?'];
     const vals = ['active'];
     
-    if (type && ['nyumba', 'chumba', 'frem', 'ofisi'].includes(type)) {
-      where.push('p.type = ?');
-      vals.push(type);
-    }
-    if (city && typeof city === 'string' && city.trim().length <= 100) {
-      where.push('p.city LIKE ?');
-      vals.push(`%${city.trim()}%`);
-    }
-    if (price_min && !isNaN(price_min)) {
-      where.push('p.price >= ?');
-      vals.push(parseFloat(price_min));
-    }
-    if (price_max && !isNaN(price_max)) {
-      where.push('p.price <= ?');
-      vals.push(parseFloat(price_max));
-    }
-    if (price_type && ['rent', 'sale'].includes(price_type)) {
-      where.push('p.price_type = ?');
-      vals.push(price_type);
-    }
-    if (premium === '1' || premium === 'true') {
-      where.push('p.is_premium = ?');
-      vals.push(1);
-    }
-    if (search && typeof search === 'string' && search.trim().length <= 100) {
-      where.push('(p.title LIKE ? OR p.area LIKE ? OR p.city LIKE ?)');
-      const safe = `%${search.trim()}%`;
-      vals.push(safe, safe, safe);
-    }
+    if (type && ['nyumba', 'chumba', 'frem', 'ofisi'].includes(type)) { where.push('p.type = ?'); vals.push(type); }
+    if (city && typeof city === 'string' && city.trim().length <= 100) { where.push('p.city LIKE ?'); vals.push(`%${city.trim()}%`); }
+    if (price_min && !isNaN(price_min)) { where.push('p.price >= ?'); vals.push(parseFloat(price_min)); }
+    if (price_max && !isNaN(price_max)) { where.push('p.price <= ?'); vals.push(parseFloat(price_max)); }
+    if (price_type && ['rent', 'sale'].includes(price_type)) { where.push('p.price_type = ?'); vals.push(price_type); }
+    if (premium === '1' || premium === 'true') { where.push('p.is_premium = ?'); vals.push(1); }
+    if (search && typeof search === 'string' && search.trim().length <= 100) { where.push('(p.title LIKE ? OR p.area LIKE ? OR p.city LIKE ?)'); const safe = `%${search.trim()}%`; vals.push(safe, safe, safe); }
     
     const wc = 'WHERE ' + where.join(' AND ');
     let orderBy = 'ORDER BY p.created_at DESC';
@@ -1051,16 +1022,7 @@ exports.getPropertiesWithSort = async (req, res) => {
     else if (sort_by === 'popular') orderBy = 'ORDER BY p.views DESC';
     else if (sort_by === 'premium') orderBy = 'ORDER BY p.is_premium DESC';
     
-    const query = `
-      SELECT p.*, u.name AS owner_name, u.phone AS owner_phone, u.avatar AS owner_avatar,
-             u.plan AS owner_plan, u.role AS owner_role, u.verified AS owner_verified,
-             (SELECT image_url FROM property_images WHERE property_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image
-      FROM properties p
-      JOIN users u ON u.id = p.owner_id
-      ${wc}
-      ${orderBy}
-      LIMIT ${parseInt(safeLimit)} OFFSET ${parseInt(offset)}
-    `;
+    const query = `SELECT p.*, u.name AS owner_name, u.phone AS owner_phone, u.avatar AS owner_avatar, u.plan AS owner_plan, u.role AS owner_role, u.verified AS owner_verified, (SELECT image_url FROM property_images WHERE property_id = p.id AND is_primary = 1 LIMIT 1) AS primary_image FROM properties p JOIN users u ON u.id = p.owner_id ${wc} ${orderBy} LIMIT ${parseInt(safeLimit)} OFFSET ${parseInt(offset)}`;
     
     const [rows] = await db.execute(query, vals);
     const countQuery = `SELECT COUNT(*) AS t FROM properties p ${wc}`;
@@ -1073,48 +1035,17 @@ exports.getPropertiesWithSort = async (req, res) => {
   }
 };
 
-// ============================================================
-// PRIVACY & TERMS (YOUR ORIGINAL WORKING CODE)
-// ============================================================
-
-exports.getPrivacyPolicy = async (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      title: 'Sera ya Faragha',
-      last_updated: '2025-01-01',
-      content: `MakaziPlus inaheshimu faragha yako. Tunakusanya taarifa zako za msingi (jina, barua pepe, namba ya simu) kwa ajili ya kutoa huduma zetu. Hatutashiriki taarifa zako na watu wengine bila idhini yako. Una haki ya kuomba taarifa zako zifutwe wakati wowote.`
-    }
-  });
-};
-
-exports.getTermsOfService = async (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      title: 'Masharti ya Matumizi',
-      last_updated: '2025-01-01',
-      content: `Kwa kutumia MakaziPlus, unakubali kuwa taarifa zako ni sahihi. Wateja wanawajibika kuthibitisha taarifa za mali kabla ya kufanya maamuzi. MakaziPlus haihusiki na miamala kati ya wateja na wauzaji.`
-    }
-  });
-};
-
-// ============================================================
-// UPDATE PROPERTY AVAILABILITY (YOUR ORIGINAL WORKING CODE)
-// ============================================================
-
 exports.updatePropertyAvailability = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { property_status } = req.body;
     const allowedStatuses = new Set(['available', 'sold', 'rented', 'pending']);
-    if (!allowedStatuses.has(property_status))
-      return res.status(400).json({ success: false, message: 'Hali si sahihi' });
+    if (!allowedStatuses.has(property_status)) return res.status(400).json({ success: false, message: 'Hali si sahihi' });
+    
     const [rows] = await db.execute('SELECT owner_id FROM properties WHERE id = ?', [id]);
-    if (!rows.length)
-      return res.status(404).json({ success: false, message: 'Mali haipatikani' });
-    if (rows[0].owner_id !== req.user.id && req.user.role !== 'admin')
-      return res.status(403).json({ success: false, message: 'Huna ruhusa' });
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Mali haipatikani' });
+    if (rows[0].owner_id !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Huna ruhusa' });
+    
     await db.execute('UPDATE properties SET property_status = ? WHERE id = ?', [property_status, id]);
     res.json({ success: true, message: 'Hali ya mali imesasishwa' });
   } catch (e) {
