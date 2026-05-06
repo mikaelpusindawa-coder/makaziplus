@@ -1,13 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { TopBar } from '../components/layout/TopBar';
 import { Spinner, EmptyState } from '../components/common/Spinner';
 import { formatPrice, getAvatar, formatDate } from '../utils/helpers';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
+} from 'recharts';
 import api from '../utils/api';
 
-const TABS = ['Overview', 'Users', 'Listings', 'Payments', 'Verifications', 'Security'];
+const TABS = ['Overview', 'Users', 'Listings', 'Payments', 'Verifications', 'Security', 'Analytics'];
 
 const Badge = ({ children, color = 'green' }) => {
   const colors = {
@@ -91,12 +96,10 @@ const VerificationCard = ({ request, onApprove, onReject, onViewDetails }) => {
     <div className="border-b border-surface-4 last:border-0">
       <div className="p-4 hover:bg-surface/50 transition-colors">
         <div className="flex items-start gap-3">
-          {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
             <span className="text-sm font-bold text-primary">{request.name?.charAt(0) || 'U'}</span>
           </div>
           
-          {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-semibold text-ink">{request.name}</span>
@@ -113,16 +116,14 @@ const VerificationCard = ({ request, onApprove, onReject, onViewDetails }) => {
             <div className="text-2xs text-ink-5 mt-0.5">📞 {request.phone}</div>
             <div className="text-2xs text-ink-5">🆔 {request.id_number}</div>
             <div className="text-2xs text-ink-5">📅 Iliyotumwa: {formatDate(request.created_at)}</div>
-            
-            {/* Expand button */}
+
             <button
               onClick={() => setExpanded(!expanded)}
               className="text-xs text-primary font-medium mt-2 flex items-center gap-1 hover:underline"
             >
               {expanded ? '▼' : '▶'} {expanded ? 'Funga' : 'Ona Picha'}
             </button>
-            
-            {/* Expanded content with images */}
+
             {expanded && (
               <div className="mt-3 pt-3 border-t border-surface-4">
                 <div className="grid grid-cols-3 gap-2">
@@ -169,8 +170,7 @@ const VerificationCard = ({ request, onApprove, onReject, onViewDetails }) => {
               </div>
             )}
           </div>
-          
-          {/* Actions */}
+
           {request.status === 'pending' && (
             <div className="flex gap-2 flex-shrink-0">
               <button
@@ -192,7 +192,6 @@ const VerificationCard = ({ request, onApprove, onReject, onViewDetails }) => {
         </div>
       </div>
 
-      {/* Reject Modal */}
       {showRejectModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -211,8 +210,8 @@ const VerificationCard = ({ request, onApprove, onReject, onViewDetails }) => {
             />
             <div className="flex gap-3">
               <button onClick={() => setShowRejectModal(false)} className="flex-1 py-2 border border-surface-4 rounded-xl text-sm font-medium">
-                  Ghairi
-                </button>
+                Ghairi
+              </button>
               <button onClick={handleReject} className="flex-1 py-2 bg-red-600 text-white rounded-xl text-sm font-bold">
                 Kataa
               </button>
@@ -228,7 +227,7 @@ export default function Admin() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-
+  const { t } = useTranslation();
   const [tab, setTab] = useState(0);
   const [users, setUsers] = useState([]);
   const [props, setProps] = useState([]);
@@ -240,9 +239,67 @@ export default function Admin() {
   const [blockIp, setBlockIp] = useState('');
   const [blockReason, setBlockReason] = useState('');
 
+  // Analytics data states
+  const [revenueData, setRevenueData] = useState([]);
+  const [userGrowthData, setUserGrowthData] = useState([]);
+  const [propertyTypeData, setPropertyTypeData] = useState([]);
+  const [cityData, setCityData] = useState([]);
+
   useEffect(() => {
     if (user && user.role !== 'admin') navigate('/');
   }, [user, navigate]);
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      // Fetch revenue by month
+      const revenueRes = await api.get('/admin/analytics/revenue');
+      setRevenueData(revenueRes.data.data || []);
+
+      // Fetch user growth
+      const userGrowthRes = await api.get('/admin/analytics/user-growth');
+      setUserGrowthData(userGrowthRes.data.data || []);
+
+      // Fetch property type distribution
+      const typeRes = await api.get('/admin/analytics/property-types');
+      setPropertyTypeData(typeRes.data.data || []);
+
+      // Fetch city distribution
+      const cityRes = await api.get('/admin/analytics/city-distribution');
+      setCityData(cityRes.data.data || []);
+    } catch (err) {
+      console.error('Analytics fetch error:', err);
+      // Generate sample data if API fails
+      setRevenueData([
+        { month: 'Jan', revenue: 0 },
+        { month: 'Feb', revenue: 0 },
+        { month: 'Mar', revenue: 0 },
+        { month: 'Apr', revenue: 0 },
+        { month: 'Mei', revenue: 0 },
+        { month: 'Jun', revenue: 0 },
+      ]);
+      setUserGrowthData([
+        { month: 'Jan', users: 0 },
+        { month: 'Feb', users: 0 },
+        { month: 'Mar', users: 0 },
+        { month: 'Apr', users: 0 },
+        { month: 'Mei', users: 0 },
+        { month: 'Jun', users: 0 },
+      ]);
+      setPropertyTypeData([
+        { name: 'Nyumba', value: 0 },
+        { name: 'Chumba', value: 0 },
+        { name: 'Frem', value: 0 },
+        { name: 'Ofisi', value: 0 },
+      ]);
+      setCityData([
+        { name: 'Dar es Salaam', value: 0 },
+        { name: 'Mwanza', value: 0 },
+        { name: 'Arusha', value: 0 },
+        { name: 'Dodoma', value: 0 },
+        { name: 'Mbeya', value: 0 },
+      ]);
+    }
+  }, []);
 
   const fetchAll = useCallback(async () => {
     if (!user || user.role !== 'admin') return;
@@ -272,7 +329,8 @@ export default function Admin() {
 
   useEffect(() => {
     fetchAll();
-  }, [user]);
+    fetchAnalytics();
+  }, [user, fetchAll, fetchAnalytics]);
 
   const toggleVerify = async (uid, current) => {
     try {
@@ -354,6 +412,8 @@ export default function Admin() {
   const totalRevenue = payments.filter(p => p.status === 'completed').reduce((s, p) => s + parseFloat(p.amount || 0), 0);
   const pendingVerifications = verifications.filter(v => v.status === 'pending').length;
 
+  const COLORS = ['#0d5c36', '#52b47d', '#c8933a', '#2563eb', '#dc2626', '#7a8c82'];
+
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-8">
       <TopBar title="🛡️ Admin Panel" showBack />
@@ -362,8 +422,8 @@ export default function Admin() {
       <div className="bg-gradient-to-br from-ink to-primary/90 px-4 py-5 relative overflow-hidden">
         <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/5 rounded-full" />
         <div className="font-serif text-xl font-semibold text-white">Admin Panel</div>
-        <div className="text-xs text-white/40 mt-0.5">MakaziPlus v4.0 — Simamia mfumo wote</div>
-        
+        <div className="text-xs text-white/40 mt-0.5">MakaziPlus v4.0 --- Simamia mfumo wote</div>
+
         {stats && (
           <div className="flex gap-4 mt-3">
             {[
@@ -402,7 +462,7 @@ export default function Admin() {
         <div className="flex justify-center py-16"><Spinner size="lg" /></div>
       ) : (
         <div className="px-3">
-          {/* ─── TAB 0: OVERVIEW ─── */}
+          {/* TAB 0: OVERVIEW */}
           {tab === 0 && stats && (
             <>
               <div className="grid grid-cols-2 gap-2.5 mb-3">
@@ -421,9 +481,10 @@ export default function Admin() {
 
               <div className="bg-white rounded-2xl p-4 shadow-sm mb-3">
                 <div className="text-sm font-bold text-ink mb-4">🔥 Mali Zinazoongoza (Views)</div>
-                {stats.top_properties?.length ? stats.top_properties.map((p, i) => (
-                  <BarRow key={p.id} label={`${i+1}. ${p.area} — ${p.title?.substring(0, 25)}...`} count={p.views} max={stats.top_properties[0]?.views || 1} />
-                )) : <div className="text-xs text-ink-4">Hakuna data</div>}
+                {stats.top_properties?.length ?
+                  stats.top_properties.map((p, i) => (
+                    <BarRow key={p.id} label={`${i + 1}. ${p.area} --- ${p.title?.substring(0, 25)}...`} count={p.views} max={stats.top_properties[0]?.views || 1} />
+                  )) : <div className="text-xs text-ink-4">Hakuna data</div>}
               </div>
 
               <div className="bg-white rounded-2xl p-4 shadow-sm">
@@ -439,7 +500,7 @@ export default function Admin() {
             </>
           )}
 
-          {/* ─── TAB 1: USERS ─── */}
+          {/* TAB 1: USERS */}
           {tab === 1 && (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-black/5 flex justify-between items-center">
@@ -486,7 +547,7 @@ export default function Admin() {
             </div>
           )}
 
-          {/* ─── TAB 2: LISTINGS ─── */}
+          {/* TAB 2: LISTINGS */}
           {tab === 2 && (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-black/5">
@@ -523,7 +584,7 @@ export default function Admin() {
             </div>
           )}
 
-          {/* ─── TAB 3: PAYMENTS ─── */}
+          {/* TAB 3: PAYMENTS */}
           {tab === 3 && (
             <>
               <div className="bg-gradient-to-br from-ink to-primary rounded-2xl p-5 mb-3 shadow-sm relative overflow-hidden">
@@ -558,7 +619,7 @@ export default function Admin() {
             </>
           )}
 
-          {/* ─── TAB 4: VERIFICATIONS ─── */}
+          {/* TAB 4: VERIFICATIONS */}
           {tab === 4 && (
             <>
               <div className="grid grid-cols-2 gap-2.5 mb-3">
@@ -567,7 +628,6 @@ export default function Admin() {
                 <StatCard icon="❌" label="Zilizokataliwa" value={verifications.filter(v => v.status === 'rejected').length} sub="Zimekataliwa" />
                 <StatCard icon="📊" label="Watumiaji Walio Thibitishwa" value={users.filter(u => u.is_verified).length} sub={`Kati ya ${users.length} watumiaji`} />
               </div>
-
               {verifications.length === 0 ? (
                 <EmptyState icon="📋" title="Hakuna maombi ya uthibitisho" subtitle="Maombi ya uthibitisho yataonekana hapa" />
               ) : (
@@ -588,7 +648,7 @@ export default function Admin() {
             </>
           )}
 
-          {/* ─── TAB 5: SECURITY ─── */}
+          {/* TAB 5: SECURITY */}
           {tab === 5 && (
             <>
               <div className="grid grid-cols-3 gap-2 mb-3">
@@ -596,7 +656,6 @@ export default function Admin() {
                 <StatCard icon="⚠️" label="Majaribio Mabaya (1h)" value={security?.counts?.failed_1h || 0} highlight={(security?.counts?.failed_1h || 0) > 20} />
                 <StatCard icon="🔒" label="Akaunti Zilizofungwa" value={security?.counts?.locked_accounts || 0} highlight={(security?.counts?.locked_accounts || 0) > 0} />
               </div>
-
               {security?.alerts?.length > 0 && (
                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-3">
                   <div className="px-4 py-3 border-b border-black/5 flex justify-between items-center">
@@ -621,7 +680,6 @@ export default function Admin() {
                   ))}
                 </div>
               )}
-
               <div className="bg-white rounded-2xl p-4 shadow-sm mb-3">
                 <div className="text-sm font-bold text-ink mb-3">🚫 Funga IP Address</div>
                 <div className="space-y-2">
@@ -630,7 +688,6 @@ export default function Admin() {
                   <button onClick={handleBlockIp} className="w-full py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold active:scale-[.98] transition-transform">🚫 Funga IP</button>
                 </div>
               </div>
-
               {security?.blocked_ips?.length > 0 && (
                 <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-3">
                   <div className="px-4 py-3 border-b border-black/5">
@@ -647,11 +704,93 @@ export default function Admin() {
                   ))}
                 </div>
               )}
-
               {!security?.alerts?.length && !security?.blocked_ips?.length && (
                 <EmptyState icon="✅" title="Hakuna vitisho vya sasa hivi" subtitle="Mfumo uko salama. Hakuna IP zinazoshukiwa." />
               )}
             </>
+          )}
+
+          {/* TAB 6: ANALYTICS - NEW WITH CHARTS */}
+          {tab === 6 && (
+            <div className="space-y-4">
+              {/* Revenue Chart */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-surface-4">
+                <h3 className="text-sm font-bold text-ink mb-4">📈 Mapato kwa Mwezi (TZS)</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`} />
+                    <Tooltip formatter={(value) => [`TSh ${value.toLocaleString()}`, 'Mapato']} />
+                    <Legend />
+                    <Line type="monotone" dataKey="revenue" stroke="#0d5c36" strokeWidth={2} dot={{ fill: '#0d5c36', r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* User Growth Chart */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-surface-4">
+                <h3 className="text-sm font-bold text-ink mb-4">👥 Ukuaji wa Watumiaji</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={userGrowthData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="users" stroke="#c8933a" strokeWidth={2} dot={{ fill: '#c8933a', r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Property Type Distribution - Pie Chart */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-surface-4">
+                <h3 className="text-sm font-bold text-ink mb-4">🏠 Usambazaji wa Aina za Mali</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={propertyTypeData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {propertyTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* City Distribution - Bar Chart */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-surface-4">
+                <h3 className="text-sm font-bold text-ink mb-4">📍 Usambazaji wa Mali kwa Miji</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={cityData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="value" fill="#0d5c36" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Quick Stats Summary */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <StatCard icon="🏠" label="Jumla ya Mali" value={props.length} sub="zilizoorodheshwa" />
+                <StatCard icon="👥" label="Jumla ya Watumiaji" value={users.length} sub="waliojiunga" />
+                <StatCard icon="💰" label="Jumla ya Mapato" value={formatPrice(totalRevenue)} sub="malipo yote" />
+                <StatCard icon="⭐" label="Wastani wa Rating" value={(users.reduce((s, u) => s + (u.rating || 0), 0) / (users.length || 1)).toFixed(1)} sub="kati ya 5" />
+              </div>
+            </div>
           )}
         </div>
       )}
