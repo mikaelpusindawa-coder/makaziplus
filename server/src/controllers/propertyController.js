@@ -8,9 +8,6 @@ const ALLOWED_UPDATE_FIELDS = new Set([
   'city', 'area', 'address', 'bedrooms', 'bathrooms', 'size_sqm', 'status', 'property_status'
 ]);
 
-// ============================================================
-// GET ALL PROPERTIES (with filters + images)
-// ============================================================
 exports.getProperties = async (req, res) => {
   try {
     let { type, city, price_min, price_max, price_type, search, premium, page = 1, limit = 20 } = req.query;
@@ -87,9 +84,6 @@ exports.getProperties = async (req, res) => {
   }
 };
 
-// ============================================================
-// GET SINGLE PROPERTY
-// ============================================================
 exports.getProperty = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -138,9 +132,6 @@ exports.getProperty = async (req, res) => {
   }
 };
 
-// ============================================================
-// GET MY PROPERTIES
-// ============================================================
 exports.getMyProperties = async (req, res) => {
   try {
     const [rows] = await db.execute(`
@@ -158,9 +149,6 @@ exports.getMyProperties = async (req, res) => {
   }
 };
 
-// ============================================================
-// CREATE PROPERTY
-// ============================================================
 exports.createProperty = async (req, res) => {
   try {
     const { title, description, type, price, price_type, city, area, address, bedrooms, bathrooms, size_sqm, amenities } = req.body;
@@ -208,21 +196,14 @@ exports.createProperty = async (req, res) => {
     ]);
 
     const pid = r.insertId;
-    console.log(`📝 Created property ID: ${pid}`);
 
-    if (req.files && req.files.length > 0) {
-      console.log(`📸 Saving ${req.files.length} images for property ${pid}`);
+    if (req.files && req.files.length) {
       for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
-        const imageUrl = `/uploads/properties/${file.filename}`;
         await db.execute(
           'INSERT INTO property_images (property_id, image_url, is_primary, sort_order) VALUES (?, ?, ?, ?)',
-          [pid, imageUrl, i === 0 ? 1 : 0, i]
+          [pid, `/uploads/properties/${req.files[i].filename}`, i === 0 ? 1 : 0, i]
         );
-        console.log(`   Image ${i + 1}: ${imageUrl}`);
       }
-    } else {
-      console.log(`⚠️ No images uploaded for property ${pid}`);
     }
 
     if (amenities) {
@@ -244,37 +225,23 @@ exports.createProperty = async (req, res) => {
 };
 
 // ============================================================
-// UPDATE PROPERTY (WITH DEBUGGING)
+// UPDATE PROPERTY - YOUR ORIGINAL WORKING VERSION (Restored)
 // ============================================================
 exports.updateProperty = async (req, res) => {
-  // DEBUGGING: Log the incoming request
-  console.log('🔍 UPDATE REQUEST RECEIVED');
-  console.log('🔍 Property ID:', req.params.id);
-  console.log('🔍 Request body keys:', Object.keys(req.body || {}));
-  console.log('🔍 Files received:', req.files ? req.files.length : 0);
-  
   try {
     const id = parseInt(req.params.id);
     if (!id || isNaN(id)) {
       return res.status(400).json({ success: false, message: 'ID si sahihi' });
     }
 
-    // FIRST: Check if property exists
     const [rows] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
     if (!rows.length) {
-      console.log(`❌ Property ${id} not found`);
       return res.status(404).json({ success: false, message: 'Mali haipatikani' });
     }
-
-    console.log(`✅ Property ${id} found, owner: ${rows[0].owner_id}, current user: ${req.user.id}`);
-
-    // SECOND: Check authorization
     if (rows[0].owner_id !== req.user.id && req.user.role !== 'admin') {
-      console.log(`❌ Unauthorized: User ${req.user.id} trying to edit property ${id}`);
       return res.status(403).json({ success: false, message: 'Huna ruhusa' });
     }
 
-    // THIRD: Update property fields
     const sets = [];
     const vals = [];
     for (const field of ALLOWED_UPDATE_FIELDS) {
@@ -285,7 +252,6 @@ exports.updateProperty = async (req, res) => {
         if (field === 'price' && isNaN(parseFloat(req.body[field]))) continue;
         sets.push(`${field} = ?`);
         vals.push(req.body[field]);
-        console.log(`📝 Updating field ${field} to:`, req.body[field]);
       }
     }
 
@@ -294,66 +260,30 @@ exports.updateProperty = async (req, res) => {
     if (req.body.place_id !== undefined) { sets.push('place_id = ?'); vals.push(req.body.place_id || null); }
     if (req.body.formatted_address !== undefined) { sets.push('formatted_address = ?'); vals.push(req.body.formatted_address || null); }
 
-    if (sets.length > 0) {
-      vals.push(id);
-      console.log(`📝 Executing UPDATE with ${sets.length} fields`);
-      await db.execute(`UPDATE properties SET ${sets.join(', ')} WHERE id = ?`, vals);
-    } else {
-      console.log(`📝 No field updates, only image changes`);
+    if (!sets.length) {
+      return res.status(400).json({ success: false, message: 'Hakuna mabadiliko' });
     }
 
-    // FOURTH: Save new uploaded images
-    if (req.files && req.files.length > 0) {
-      console.log(`📸 Adding ${req.files.length} new images for property ${id}`);
-      const [existingImages] = await db.execute(
-        'SELECT MAX(sort_order) as max_order FROM property_images WHERE property_id = ?',
-        [id]
-      );
-      let startOrder = (existingImages[0].max_order || -1) + 1;
-      
+    vals.push(id);
+    await db.execute(`UPDATE properties SET ${sets.join(', ')} WHERE id = ?`, vals);
+
+    if (req.files && req.files.length) {
       for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
-        const imageUrl = `/uploads/properties/${file.filename}`;
         await db.execute(
           'INSERT INTO property_images (property_id, image_url, is_primary, sort_order) VALUES (?, ?, ?, ?)',
-          [id, imageUrl, 0, startOrder + i]
+          [id, `/uploads/properties/${req.files[i].filename}`, 0, i]
         );
-        console.log(`   New image ${i + 1}: ${imageUrl}`);
       }
     }
 
-    // FIFTH: Handle removal of images
-    if (req.body.remove_images) {
-      try {
-        const toRemove = typeof req.body.remove_images === 'string' 
-          ? JSON.parse(req.body.remove_images) 
-          : req.body.remove_images;
-        
-        if (Array.isArray(toRemove) && toRemove.length > 0) {
-          console.log(`🗑️ Removing ${toRemove.length} images`);
-          for (const imgId of toRemove) {
-            await db.execute('DELETE FROM property_images WHERE id = ? AND property_id = ?', [imgId, id]);
-            console.log(`   Removed image ID: ${imgId}`);
-          }
-        }
-      } catch (parseErr) {
-        console.error('Error parsing remove_images:', parseErr.message);
-      }
-    }
-
-    const [updated] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
-    console.log(`✅ Update completed for property ${id}`);
-    res.json({ success: true, data: updated[0], message: 'Tangazo limesasishwa!' });
+    const [u] = await db.execute('SELECT * FROM properties WHERE id = ?', [id]);
+    res.json({ success: true, data: u[0], message: 'Tangazo limesasishwa!' });
   } catch (e) {
     console.error('updateProperty error:', e.message);
-    console.error('Stack:', e.stack);
     res.status(500).json({ success: false, message: 'Hitilafu ya seva', error: e.message });
   }
 };
 
-// ============================================================
-// DELETE PROPERTY
-// ============================================================
 exports.deleteProperty = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -377,9 +307,6 @@ exports.deleteProperty = async (req, res) => {
   }
 };
 
-// ============================================================
-// BOOST PROPERTY
-// ============================================================
 exports.boostProperty = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -403,9 +330,6 @@ exports.boostProperty = async (req, res) => {
   }
 };
 
-// ============================================================
-// UPDATE PROPERTY STATUS
-// ============================================================
 exports.updatePropertyStatus = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
