@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider } from './context/LanguageContext';  // ADD THIS
 import { BottomNav, DesktopSidebar } from './components/layout/BottomNav';
 import { Spinner } from './components/common/Spinner';
 
@@ -108,7 +108,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <LanguageProvider>
+          <LanguageProvider>  {/* ADD THIS */}
             <AppRoutes />
           </LanguageProvider>
         </ToastProvider>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useLanguage } from '../context/LanguageContext';
 import { TopBar } from '../components/layout/TopBar';
 import { PaymentModal, Spinner } from '../components/common/Spinner';
 import { ROLE_LABELS, getAvatar } from '../utils/helpers';
@@ -12,7 +12,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
   const { toast } = useToast();
-  const { language, changeLanguage, t } = useLanguage();
+  const { t, i18n } = useTranslation();
 
   // State for edit profile modal
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -70,16 +70,18 @@ export default function Profile() {
       try {
         const r = await api.get('/settings');
         setSettings(r.data.data);
-        // Sync language from backend
-        if (r.data.data?.language && ['sw', 'en'].includes(r.data.data.language)) {
-          changeLanguage(r.data.data.language);
+        // Sync language with i18n
+        if (r.data.data?.language === 'en') {
+          i18n.changeLanguage('en');
+        } else {
+          i18n.changeLanguage('sw');
         }
       } catch (err) {
         console.error('Load settings error:', err);
       }
     };
     loadSettings();
-  }, [user, changeLanguage]);
+  }, [user, i18n]);
 
   if (!user) {
     navigate('/auth');
@@ -90,14 +92,14 @@ export default function Profile() {
 
   // MENU ITEMS
   const MENU = [
-    { icon: '📊', label: 'Dashibodi', sub: 'Analytics na matangazo yako', path: '/dashboard', show: true },
-    { icon: '❤️', label: 'Zilizohifadhiwa', sub: 'Mali uliyopenda', path: '/favorites', show: true },
-    { icon: '➕', label: 'Ongeza Mali', sub: 'Chapisha tangazo jipya', path: '/add', show: true },
-    { icon: '⭐', label: 'Upgradi Akaunti', sub: 'Pro -- TSh 30,000/mwezi', path: '/subscription', show: true },
-    { icon: '📅', label: 'Bookings Zangu', sub: 'Angalia na udhibiti bookings zako', path: '/bookings', show: true },
-    { icon: '🔔', label: 'Arifa', sub: 'Tazama arifa zako zote', path: '/notifications', show: true },
-    { icon: '🛡️', label: 'Admin Panel', sub: 'Simamia mfumo wote', path: '/admin', show: user.role === 'admin' },
-    { icon: '❓', label: 'Msaada & FAQs', sub: 'Maswali, msaada wa kiufundi', path: '/help', show: true },
+    { icon: '📊', label: t('nav.dashboard') || 'Dashibodi', sub: 'Analytics na matangazo yako', path: '/dashboard', show: true },
+    { icon: '❤️', label: t('nav.favorites') || 'Zilizohifadhiwa', sub: 'Mali uliyopenda', path: '/favorites', show: true },
+    { icon: '➕', label: t('nav.add_property') || 'Ongeza Mali', sub: 'Chapisha tangazo jipya', path: '/add', show: true },
+    { icon: '⭐', label: t('nav.subscription') || 'Upgradi Akaunti', sub: 'Pro -- TSh 30,000/mwezi', path: '/subscription', show: true },
+    { icon: '📅', label: t('nav.bookings') || 'Bookings Zangu', sub: 'Angalia na udhibiti bookings zako', path: '/bookings', show: true },
+    { icon: '🔔', label: t('nav.notifications') || 'Arifa', sub: 'Tazama arifa zako zote', path: '/notifications', show: true },
+    { icon: '🛡️', label: t('nav.admin') || 'Admin Panel', sub: 'Simamia mfumo wote', path: '/admin', show: user.role === 'admin' },
+    { icon: '❓', label: t('nav.help') || 'Msaada & FAQs', sub: 'Maswali, msaada wa kiufundi', path: '/help', show: true },
   ];
 
   // ─── EDIT PROFILE ────────────────────────────────────────────────
@@ -204,9 +206,11 @@ export default function Profile() {
     setUpdatingSettings(true);
     try {
       await api.patch('/settings', settings);
-      // Sync language change
-      if (settings.language && ['sw', 'en'].includes(settings.language)) {
-        changeLanguage(settings.language);
+      // Sync language change with i18n
+      if (settings.language === 'en') {
+        i18n.changeLanguage('en');
+      } else {
+        i18n.changeLanguage('sw');
       }
       toast('Mipangilio imehifadhiwa! ✅', 'success');
       setSettingsModalOpen(false);
@@ -273,7 +277,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-8 animate-fade-in-up">
-      <TopBar title="Akaunti Yangu" showBack />
+      <TopBar title={t('nav.profile') || 'Akaunti Yangu'} showBack />
 
       {/* Cover Image */}
       <div className="h-32 relative overflow-hidden">
@@ -360,7 +364,7 @@ export default function Profile() {
         >
           <div className="w-9 h-9 bg-primary-pale rounded-xl flex items-center justify-center text-base">⚙️</div>
           <div className="flex-1 text-left">
-            <div className="text-sm font-semibold text-ink">Mipangilio</div>
+            <div className="text-sm font-semibold text-ink">{t('settings.settings') || 'Mipangilio'}</div>
             <div className="text-2xs text-ink-4 mt-0.5">Arifa, lugha, na zaidi</div>
           </div>
           <span className="text-ink-5 text-xl leading-none">›</span>
@@ -372,7 +376,7 @@ export default function Profile() {
         >
           <div className="w-9 h-9 bg-primary-pale rounded-xl flex items-center justify-center text-base">🔐</div>
           <div className="flex-1 text-left">
-            <div className="text-sm font-semibold text-ink">Badilisha Nywila</div>
+            <div className="text-sm font-semibold text-ink">{t('settings.change_password') || 'Badilisha Nywila'}</div>
             <div className="text-2xs text-ink-4 mt-0.5">Sasisha nywila yako</div>
           </div>
           <span className="text-ink-5 text-xl leading-none">›</span>
@@ -383,7 +387,7 @@ export default function Profile() {
           className="w-full flex items-center gap-3 bg-red-50 rounded-2xl px-4 py-3.5 mt-3 border border-red-100 active:scale-[.99] transition-all"
         >
           <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center text-base">🚪</div>
-          <div className="text-sm font-semibold text-red-600">Toka kwenye Akaunti</div>
+          <div className="text-sm font-semibold text-red-600">{t('auth.logout') || 'Toka kwenye Akaunti'}</div>
         </button>
       </div>
 
@@ -490,7 +494,9 @@ export default function Profile() {
             <div className="p-5 space-y-4">
               {/* Language Toggle Section */}
               <div className="border-b border-surface-4 pb-3">
-                <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-2">Lugha / Language</label>
+                <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-2">
+                  {t('settings.language') || 'Lugha / Language'}
+                </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -515,7 +521,7 @@ export default function Profile() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-2">
                   <div>
-                    <div className="text-sm font-semibold text-ink">Arifa za Barua Pepe</div>
+                    <div className="text-sm font-semibold text-ink">{t('settings.email_notifications') || 'Arifa za Barua Pepe'}</div>
                     <div className="text-2xs text-ink-4">Pokea arifa kwenye barua pepe yako</div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -531,7 +537,7 @@ export default function Profile() {
 
                 <div className="flex items-center justify-between py-2">
                   <div>
-                    <div className="text-sm font-semibold text-ink">Arifa za SMS</div>
+                    <div className="text-sm font-semibold text-ink">{t('settings.sms_notifications') || 'Arifa za SMS'}</div>
                     <div className="text-2xs text-ink-4">Pokea arifa kwenye simu yako</div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -547,7 +553,7 @@ export default function Profile() {
 
                 <div className="flex items-center justify-between py-2">
                   <div>
-                    <div className="text-sm font-semibold text-ink">Arifa za Push</div>
+                    <div className="text-sm font-semibold text-ink">{t('settings.push_notifications') || 'Arifa za Push'}</div>
                     <div className="text-2xs text-ink-4">Pokea arifa za papo kwa hapo</div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -563,15 +569,15 @@ export default function Profile() {
               </div>
 
               <div className="pt-3 border-t border-surface-4">
-                <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Mandhari</label>
+                <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">{t('settings.theme') || 'Mandhari'}</label>
                 <select value={settings.theme} onChange={(e) => setSettings({ ...settings, theme: e.target.value })} className="input-field">
-                  <option value="light">Mwangaza</option>
-                  <option value="dark">Giza</option>
+                  <option value="light">{t('settings.theme_light') || 'Mwangaza'}</option>
+                  <option value="dark">{t('settings.theme_dark') || 'Giza'}</option>
                 </select>
               </div>
 
               <button onClick={handleUpdateSettings} disabled={updatingSettings} className="btn-primary">
-                {updatingSettings ? <><Spinner size="sm" color="white" /> Inahifadhi...</> : 'Hifadhi Mipangilio'}
+                {updatingSettings ? <><Spinner size="sm" color="white" /> Inahifadhi...</> : (t('settings.save_settings') || 'Hifadhi Mipangilio')}
               </button>
             </div>
           </div>
@@ -592,22 +598,22 @@ export default function Profile() {
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-ink-4 mb-1.5">Nywila ya Sasa</label>
+                <label className="block text-xs font-bold text-ink-4 mb-1.5">{t('settings.current_password') || 'Nywila ya Sasa'}</label>
                 <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" className="input-field" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-ink-4 mb-1.5">Nywila Mpya</label>
+                <label className="block text-xs font-bold text-ink-4 mb-1.5">{t('settings.new_password') || 'Nywila Mpya'}</label>
                 <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Angalau herufi 8" className="input-field" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-ink-4 mb-1.5">Thibitisha Nywila Mpya</label>
+                <label className="block text-xs font-bold text-ink-4 mb-1.5">{t('settings.confirm_password') || 'Thibitisha Nywila Mpya'}</label>
                 <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Rudia nywila mpya" className="input-field" />
               </div>
               {newPassword && confirmPassword && newPassword !== confirmPassword && (
                 <p className="text-xs text-red-500">⚠️ Nywila hazifanani</p>
               )}
               <button onClick={handleChangePassword} disabled={changingPassword} className="btn-primary">
-                {changingPassword ? <><Spinner size="sm" color="white" /> Inabadilisha...</> : 'Badilisha Nywila'}
+                {changingPassword ? <><Spinner size="sm" color="white" /> Inabadilisha...</> : (t('settings.change_password') || 'Badilisha Nywila')}
               </button>
             </div>
           </div>
