@@ -12,6 +12,9 @@ const db = require('./config/db');
 const app = express();
 const server = http.createServer(app);
 
+// Import booking expiry worker
+const startBookingExpiryWorker = require('./bookingExpiryWorker');
+
 // ============================================================
 // SOCKET.IO WITH AUTHENTICATION
 // ============================================================
@@ -175,26 +178,29 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================================
-// STATIC FILES FOR UPLOADS (CRITICAL FIX)
+// STATIC FILES FOR UPLOADS (CRITICAL - WITH CORS)
 // ============================================================
 const fs = require('fs');
 const uploadsDir = path.join(__dirname, '../uploads');
 const propertiesDir = path.join(uploadsDir, 'properties');
 const avatarsDir = path.join(uploadsDir, 'avatars');
 const verificationDir = path.join(uploadsDir, 'verifications');
+const videosDir = path.join(uploadsDir, 'videos');
 
 // Create directories if they don't exist
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 if (!fs.existsSync(propertiesDir)) fs.mkdirSync(propertiesDir, { recursive: true });
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
 if (!fs.existsSync(verificationDir)) fs.mkdirSync(verificationDir, { recursive: true });
+if (!fs.existsSync(videosDir)) fs.mkdirSync(videosDir, { recursive: true });
 
 console.log('✅ Upload directories verified');
 console.log(`   📁 Uploads: ${uploadsDir}`);
 console.log(`   📁 Properties: ${propertiesDir}`);
 console.log(`   📁 Avatars: ${avatarsDir}`);
+console.log(`   📁 Videos: ${videosDir}`);
 
-// CRITICAL FIX: Serve static files from the correct absolute path
+// Serve uploaded files with proper CORS headers
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -347,6 +353,12 @@ app.use((err, req, res, _next) => {
 });
 
 // ============================================================
+// START BOOKING EXPIRY WORKER
+// ============================================================
+// This runs every hour to automatically mark expired bookings as 'completed'
+startBookingExpiryWorker();
+
+// ============================================================
 // START SERVER
 // ============================================================
 const PORT = parseInt(process.env.PORT) || 5000;
@@ -359,5 +371,7 @@ server.listen(PORT, () => {
   console.log(`🛡️ Security: Helmet + Rate Limiting + IP Block`);
   console.log(`💬 Chat system ready - waiting for connections`);
   console.log(`📁 Uploads directory: ${uploadsDir}`);
+  console.log(`📁 Videos directory: ${videosDir}`);
+  console.log(`🕐 Booking expiry worker started - checking every hour`);
   console.log(`========================================\n`);
 });
