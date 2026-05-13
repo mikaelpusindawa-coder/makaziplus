@@ -4,10 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner } from '../components/common/Spinner';
 
-const BG_IMAGES = [
-  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=75',
-  'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=75',
-  'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=75',
+const BG_GRADIENTS = [
+  'linear-gradient(135deg, #1B4F72 0%, #2E86C1 50%, #0B5345 100%)',
+  'linear-gradient(135deg, #4A235A 0%, #7D3C98 50%, #1B4F72 100%)',
+  'linear-gradient(135deg, #1B2631 0%, #2980B9 50%, #17A589 100%)',
 ];
 
 const ROLES = [
@@ -27,7 +27,7 @@ export default function Auth() {
   const [role,    setRole]    = useState('customer');
   const [gender,  setGender]  = useState('');
   const [loading, setLoading] = useState(false);
-  const [bgIdx]               = useState(() => Math.floor(Math.random() * BG_IMAGES.length));
+  const [bgIdx]               = useState(() => Math.floor(Math.random() * BG_GRADIENTS.length));
   const [showPass, setShowPass] = useState(false);
 
   const [form, setForm] = useState({
@@ -64,10 +64,10 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
 
-      {/* Left panel — decorative image (desktop) */}
+      {/* Left panel — decorative gradient (desktop) */}
       <div className="hidden md:flex md:w-5/12 lg:w-3/5 relative overflow-hidden flex-shrink-0">
-        <img src={BG_IMAGES[bgIdx]} alt="" className="w-full h-full object-cover"/>
-        <div className="absolute inset-0 bg-gradient-to-br from-ink/82 via-primary/55 to-transparent"/>
+        <div className="w-full h-full" style={{ background: BG_GRADIENTS[bgIdx] }}/>
+        <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/30"/>
         <div className="absolute inset-0 flex flex-col justify-end p-14">
           <div className="font-serif text-[3.5rem] font-semibold text-white leading-none">
             Makazi<span className="text-gold-200">Plus</span>
@@ -90,8 +90,8 @@ export default function Auth() {
       <div className="flex-1 flex flex-col min-h-screen md:min-h-0 relative overflow-hidden overflow-y-auto">
         {/* Mobile background */}
         <div className="md:hidden absolute inset-0">
-          <img src={BG_IMAGES[bgIdx]} alt="" className="w-full h-full object-cover"/>
-          <div className="absolute inset-0 bg-gradient-to-b from-ink/72 via-ink/52 to-ink/90"/>
+          <div className="w-full h-full" style={{ background: BG_GRADIENTS[bgIdx] }}/>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/60"/>
         </div>
 
         <div className="relative flex-1 flex flex-col justify-center p-5 md:p-10 lg:p-16 py-10 md:py-12">

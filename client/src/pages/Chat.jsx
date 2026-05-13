@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useSocket } from '../hooks/useSocket';
 import { TopBar } from '../components/layout/TopBar';
 import { Spinner, EmptyState } from '../components/common/Spinner';
 import { getAvatar, msgTime, timeAgo } from '../utils/helpers';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 
 export default function Chat() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const { t } = useTranslation();
   
   const [convos, setConvos] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -22,7 +26,6 @@ export default function Chat() {
   const [typing, setTyping] = useState(false);
   const [error, setError] = useState(null);
   
-  const bottomRef = useRef(null);
   const typingTimer = useRef(null);
   const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -194,20 +197,24 @@ export default function Chat() {
     }
     
     try {
-      // Send via socket for real-time
       if (isConnected && sendMessage) {
+        // Socket handler on server saves to DB AND broadcasts — do NOT also call API
         sendMessage(contact.id, msg);
+      } else {
+        // Offline fallback: persist via REST API only
+        const r = await api.post('/messages', { to_user_id: contact.id, message: msg });
+        // Optimistically add the sent message to local state
+        if (r.data?.data) {
+          setMessages(prev => {
+            if (prev.find(m => m.id === r.data.data.id)) return prev;
+            return [...prev, r.data.data];
+          });
+          scrollToBottom();
+        }
       }
-      
-      // Also save to database via API
-      await api.post('/messages', { 
-        to_user_id: contact.id, 
-        message: msg 
-      });
-      
     } catch (err) {
       console.error('Send message error:', err);
-      // Message might still have been sent via socket, but API failed
+      toast(t('chat.message_failed'), 'error');
     } finally {
       setSending(false);
     }
@@ -238,12 +245,12 @@ export default function Chat() {
   if (!user) {
     return (
       <div className="min-h-screen bg-surface pb-20">
-        <TopBar title="Mazungumzo" />
-        <EmptyState 
-          icon="💬" 
-          title="Ingia kwanza"
-          subtitle="Unahitaji kuingia ili kuona mazungumzo yako"
-          action={{ label: 'Ingia', onClick: () => navigate('/auth') }} 
+        <TopBar title={t('chat.title')} />
+        <EmptyState
+          icon="💬"
+          title={t('errors.please_login')}
+          subtitle={t('errors.please_login')}
+          action={{ label: t('auth.login'), onClick: () => navigate('/auth') }}
         />
       </div>
     );
@@ -289,11 +296,11 @@ export default function Chat() {
             <div className="text-sm font-bold text-ink truncate">{contactName}</div>
             <div className="text-2xs font-medium">
               {typing ? (
-                <span className="text-primary">Anaandika...</span>
+                <span className="text-primary">{t('chat.typing')}</span>
               ) : isConnected ? (
-                <span className="text-green-500">● Online</span>
+                <span className="text-green-500">● {t('chat.online')}</span>
               ) : (
-                <span className="text-ink-5">● Offline</span>
+                <span className="text-ink-5">● {t('chat.offline')}</span>
               )}
             </div>
           </div>
@@ -364,7 +371,7 @@ export default function Chat() {
             value={text}
             onChange={(e) => handleTyping(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder="Andika ujumbe..."
+            placeholder={t('chat.type_message')}
             rows={1}
             className="flex-1 resize-none border-2 border-black/10 rounded-2xl px-3.5 py-2.5 text-sm text-ink bg-surface focus:border-primary focus:bg-white outline-none max-h-28"
           />
@@ -386,11 +393,11 @@ export default function Chat() {
   // Conversation list view
   return (
     <div className="min-h-screen bg-surface pb-20">
-      <TopBar title="Mazungumzo" />
-      
+      <TopBar title={t('chat.title')} />
+
       <div className="px-4 pt-4 pb-2">
         <p className="text-xs text-ink-4">
-          {convos.length} mazungumzo yanayoendelea
+          {convos.length} {t('chat.conversations')}
           {!isConnected && (
             <span className="ml-2 text-red-500">● Offline</span>
           )}
@@ -451,12 +458,12 @@ export default function Chat() {
           })}
         </div>
       ) : (
-        <EmptyState 
-          icon="💬" 
-          title="Hakuna mazungumzo"
-          subtitle="Fungua mali yoyote na ubonyeze 'Wasiliana' kuanza"
+        <EmptyState
+          icon="💬"
+          title={t('chat.no_conversations')}
+          subtitle={t('chat.no_conversations_sub')}
           action={{
-            label: 'Tafuta Mali',
+            label: t('nav.search'),
             onClick: () => navigate('/search')
           }}
         />

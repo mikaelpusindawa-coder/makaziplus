@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner, PaymentModal } from '../components/common/Spinner';
 import { BookingModal } from '../components/common/BookingModal';
 import { RatingModal } from '../components/common/RatingModal';
-import { formatPrice, getAvatar, daysAgo, renderStars, STATUS_LABELS } from '../utils/helpers';
+import { LoginPromptModal } from '../components/common/LoginPromptModal';
+import { formatPrice, getAvatar, daysAgo, renderStars, STATUS_LABELS, resolveImageUrl, getPlaceholderImage } from '../utils/helpers';
 import api from '../utils/api';
+const PropertyMap = lazy(() => import('../components/common/PropertyMap'));
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -41,6 +43,13 @@ export default function PropertyDetail() {
   const [ownerRating, setOwnerRating] = useState(null);
   const [ownerReviews, setOwnerReviews] = useState([]);
 
+  // Guest login prompt
+  const [loginPrompt, setLoginPrompt] = useState({ open: false, action: '' });
+  const requireAuth = (action, fn) => {
+    if (!user) { setLoginPrompt({ open: true, action }); return; }
+    fn();
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -48,8 +57,7 @@ export default function PropertyDetail() {
         setProperty(r.data.data);
         const imgs = r.data.data.images || [];
         if (imgs.length) {
-          const url = imgs[0].image_url;
-          setMainImg(url.startsWith('/uploads') ? `${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000'}${url}` : url);
+          setMainImg(resolveImageUrl(imgs[0].image_url) || '');
         }
         if (user) {
           const fav = await api.get(`/favorites/${id}/check`);
@@ -81,7 +89,7 @@ export default function PropertyDetail() {
   }, [property?.owner_id]);
 
   const toggleFav = async () => {
-    if (!user) { navigate('/auth'); return; }
+    if (!user) { setLoginPrompt({ open: true, action: 'kuhifadhi mali' }); return; }
     try {
       const r = await api.post(`/favorites/${id}/toggle`);
       setIsFav(r.data.favorited);
@@ -93,12 +101,12 @@ export default function PropertyDetail() {
   };
 
   const openChat = () => {
-    if (!user) { navigate('/auth'); return; }
+    if (!user) { setLoginPrompt({ open: true, action: 'kuwasiliana na dalali/mwenye nyumba' }); return; }
     navigate(`/chat?userId=${property.owner_id}`);
   };
 
   const handleSubmitRating = async () => {
-    if (!user) { navigate('/auth'); return; }
+    if (!user) { setLoginPrompt({ open: true, action: 'kutoa tathmini' }); return; }
     if (!starValue) { toast('Chagua rating ya nyota', 'error'); return; }
 
     setSubmittingRating(true);
@@ -125,7 +133,7 @@ export default function PropertyDetail() {
   };
 
   const handleBooking = async () => {
-    if (!user) { navigate('/auth'); return; }
+    if (!user) { setLoginPrompt({ open: true, action: 'kuweka booking' }); return; }
     if (!bookingDetails.check_in || !bookingDetails.check_out) {
       toast('Chagua tarehe za kuingia na kutoka', 'error');
       return;
@@ -147,7 +155,12 @@ export default function PropertyDetail() {
         guests: bookingDetails.guests,
         special_requests: bookingDetails.special_requests
       });
-      toast(`Booking request sent! Total: ${formatPrice(r.data.total_amount)}`, 'success');
+      const amount = r.data.total_amount || r.data.data?.total_amount;
+      const days   = r.data.days || r.data.data?.days;
+      toast(
+        `Ombi la uhifadhi limetumwa! Siku ${days} • Jumla: ${formatPrice(amount)} — Subiri uthibitisho.`,
+        'success'
+      );
       setShowBookingModal(false);
       setBookingDetails({ check_in: '', check_out: '', guests: 1, special_requests: '' });
     } catch (e) {
@@ -193,7 +206,7 @@ export default function PropertyDetail() {
   const minCheckOut = bookingDetails.check_in || today;
 
   const switchImg = (url, idx) => {
-    setMainImg(url.startsWith('/uploads') ? `${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000'}${url}` : url);
+    setMainImg(resolveImageUrl(url) || '');
     setImgIdx(idx);
   };
 
@@ -205,7 +218,7 @@ export default function PropertyDetail() {
         {mainImg && (
           <img src={mainImg} alt={p.title} loading="eager"
             className="w-full h-full object-cover transition-opacity duration-300"
-            onError={e => { e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=60'; }}
+            onError={e => { e.target.onerror = null; e.target.src = getPlaceholderImage(p?.type, p?.id); }}
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
@@ -251,14 +264,13 @@ export default function PropertyDetail() {
       {allImages.length > 1 && (
         <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar bg-white border-b border-surface-4">
           {allImages.map((img, i) => {
-            const url = img.image_url.startsWith('/uploads')
-              ? `${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000'}${img.image_url}`
-              : img.image_url;
+            const url = resolveImageUrl(img.image_url) || '';
             return (
               <button key={i} onClick={() => switchImg(img.image_url, i)}
                 className={`w-16 h-12 md:w-20 md:h-14 rounded-xl overflow-hidden flex-shrink-0 transition-all ${i === imgIdx ? 'ring-2 ring-primary ring-offset-1' : 'opacity-55 hover:opacity-80'}`}
               >
-                <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                <img src={url} alt="" className="w-full h-full object-cover" loading="lazy"
+                  onError={e => { e.target.onerror = null; e.target.src = getPlaceholderImage(p?.type, p?.id); }} />
               </button>
             );
           })}
@@ -271,7 +283,7 @@ export default function PropertyDetail() {
         {/* Price + Title + Time uploaded */}
         <div className="mb-4">
           <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
+            <div className="flex-1 min-w-0">
               <div className="font-serif text-3xl md:text-4xl font-semibold text-primary">
                 {formatPrice(p.price)}
                 <span className="font-sans text-sm font-normal text-ink-5 ml-2">
@@ -297,6 +309,14 @@ export default function PropertyDetail() {
                 )}
               </div>
             </div>
+            {(isOwnProperty || user?.role === 'admin') && (
+              <button
+                onClick={() => navigate(`/add?edit=${p.id}`)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-primary-50 text-primary rounded-xl text-xs font-bold
+                  hover:bg-primary hover:text-white active:scale-95 transition-all shadow-soft flex-shrink-0">
+                ✏️ Hariri Mali
+              </button>
+            )}
           </div>
         </div>
 
@@ -339,27 +359,45 @@ export default function PropertyDetail() {
           </div>
         )}
 
+        {/* ─── MAP SECTION ─── */}
+        <div className="mb-5">
+          <h2 className="text-base font-bold text-ink mb-3">🗺️ Mahali pa Mali</h2>
+          <Suspense fallback={<div className="h-60 bg-surface-3 rounded-2xl animate-pulse"/>}>
+            <PropertyMap lat={p.latitude} lng={p.longitude} title={p.title} height="240px"/>
+          </Suspense>
+          {(p.latitude && p.longitude) && (
+            <button onClick={openGoogleMaps} className="mt-2 text-xs text-primary hover:underline flex items-center gap-1">
+              📍 Fungua Google Maps →
+            </button>
+          )}
+        </div>
+
         {/* ─── VIDEO SECTION ─── */}
-        {(p.video_url || p.video_file) && (
+        {p.video_url && (
           <div className="mb-5">
             <h2 className="text-base font-bold text-ink mb-3">🎬 Video ya Mali</h2>
             <div className="bg-black rounded-2xl overflow-hidden shadow-soft">
-              {p.video_url && (
+              {(p.video_url.includes('youtube.com') || p.video_url.includes('youtu.be') || p.video_url.includes('vimeo.com')) ? (
                 <iframe
-                  src={p.video_url.includes('youtube.com') 
-                    ? p.video_url.replace('watch?v=', 'embed/') 
-                    : p.video_url.includes('youtu.be')
-                      ? `https://www.youtube.com/embed/${p.video_url.split('/').pop()}`
-                      : p.video_url}
+                  src={
+                    p.video_url.includes('youtube.com')
+                      ? p.video_url.replace('watch?v=', 'embed/')
+                      : p.video_url.includes('youtu.be')
+                        ? `https://www.youtube.com/embed/${p.video_url.split('/').pop().split('?')[0]}`
+                        : p.video_url
+                  }
                   title="Property Video"
                   className="w-full h-64 md:h-96"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
-              )}
-              {p.video_file && !p.video_url && (
-                <video src={p.video_file} controls className="w-full h-64 md:h-96 object-contain" />
+              ) : (
+                <video
+                  src={resolveImageUrl(p.video_url, 'videos') || p.video_url}
+                  controls
+                  className="w-full h-64 md:h-96 object-contain"
+                />
               )}
             </div>
           </div>
@@ -441,7 +479,7 @@ export default function PropertyDetail() {
             )}
 
             {!user && (
-              <button onClick={() => navigate('/auth')}
+              <button onClick={() => setLoginPrompt({ open: true, action: 'kutoa tathmini' })}
                 className="w-full mt-3 py-2.5 bg-surface border-2 border-surface-4 text-ink-4 rounded-xl text-sm font-semibold active:scale-[.98] transition-all"
               >
                 🔑 Ingia kutoa tathmini
@@ -520,7 +558,8 @@ export default function PropertyDetail() {
           >
             💬 Wasiliana Sasa
           </button>
-          <button onClick={() => setShowBookingModal(true)}
+          <button
+            onClick={() => requireAuth('kuweka booking', () => setShowBookingModal(true))}
             className="flex-1 py-4 bg-gold text-white rounded-2xl font-bold text-sm active:scale-[.98] transition-all shadow-gold flex items-center justify-center gap-2 hover:bg-gold-dark"
           >
             📅 Book Now
@@ -575,6 +614,12 @@ export default function PropertyDetail() {
         amount="TSh 10,000"
         propertyId={p.id}
         onSuccess={() => { toast('Tangazo limeboostwa! ⭐', 'success'); setPayOpen(false); }}
+      />
+
+      <LoginPromptModal
+        isOpen={loginPrompt.open}
+        onClose={() => setLoginPrompt({ open: false, action: '' })}
+        action={loginPrompt.action}
       />
     </div>
   );

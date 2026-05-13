@@ -1,22 +1,24 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-
-const NAV = [
-  { path:'/', label:'Nyumbani',
-    icon:(a)=><svg viewBox="0 0 24 24" className={`w-[22px] h-[22px] transition-all duration-200 ${a?'stroke-primary fill-primary/15':'stroke-ink-5 fill-transparent'}`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-  { path:'/search', label:'Tafuta',
-    icon:(a)=><svg viewBox="0 0 24 24" className={`w-[22px] h-[22px] transition-all duration-200 ${a?'stroke-primary':'stroke-ink-5'}`} fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> },
-  { path:'/add', label:'', isFab:true },
-  { path:'/chat', label:'Gumzo',
-    icon:(a)=><svg viewBox="0 0 24 24" className={`w-[22px] h-[22px] transition-all duration-200 ${a?'stroke-primary fill-primary/15':'stroke-ink-5 fill-transparent'}`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
-  { path:'/profile', label:'Akaunti',
-    icon:(a)=><svg viewBox="0 0 24 24" className={`w-[22px] h-[22px] transition-all duration-200 ${a?'stroke-primary':'stroke-ink-5'}`} fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-];
+import { useTranslation } from 'react-i18next';
 
 export const BottomNav = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const active = (p) => p==='/' ? pathname==='/' : pathname.startsWith(p);
+
+  const NAV = [
+    { path:'/', label: t('nav.home'),
+      icon:(a)=><svg viewBox="0 0 24 24" className={`w-[22px] h-[22px] transition-all duration-200 ${a?'stroke-primary fill-primary/15':'stroke-ink-5 fill-transparent'}`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+    { path:'/search', label: t('nav.search'),
+      icon:(a)=><svg viewBox="0 0 24 24" className={`w-[22px] h-[22px] transition-all duration-200 ${a?'stroke-primary':'stroke-ink-5'}`} fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> },
+    { path:'/add', label:'', isFab:true },
+    { path:'/chat', label: t('nav.chat'),
+      icon:(a)=><svg viewBox="0 0 24 24" className={`w-[22px] h-[22px] transition-all duration-200 ${a?'stroke-primary fill-primary/15':'stroke-ink-5 fill-transparent'}`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+    { path:'/profile', label: t('nav.account'),
+      icon:(a)=><svg viewBox="0 0 24 24" className={`w-[22px] h-[22px] transition-all duration-200 ${a?'stroke-primary':'stroke-ink-5'}`} fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  ];
 
   return (
     <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50"
@@ -57,17 +59,18 @@ export const BottomNav = () => {
 export const DesktopSidebar = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const active = (p) => p==='/' ? pathname==='/' : pathname.startsWith(p);
 
   const LINKS = [
-    {path:'/',             emoji:'🏠', label:'Nyumbani'},
-    {path:'/search',       emoji:'🔍', label:'Tafuta Mali'},
-    {path:'/favorites',    emoji:'❤️', label:'Zilizohifadhiwa'},
-    {path:'/chat',         emoji:'💬', label:'Mazungumzo'},
-    {path:'/dashboard',    emoji:'📊', label:'Dashibodi'},
-    {path:'/add',          emoji:'➕', label:'Ongeza Mali'},
-    {path:'/notifications',emoji:'🔔', label:'Arifa'},
-    {path:'/profile',      emoji:'👤', label:'Akaunti'},
+    {path:'/',             emoji:'🏠', label: t('nav.home')},
+    {path:'/search',       emoji:'🔍', label: t('nav.search')},
+    {path:'/favorites',    emoji:'❤️', label: t('nav.favorites')},
+    {path:'/chat',         emoji:'💬', label: t('chat.title')},
+    {path:'/dashboard',    emoji:'📊', label: t('nav.dashboard')},
+    {path:'/add',          emoji:'➕', label: t('nav.add_property')},
+    {path:'/notifications',emoji:'🔔', label: t('nav.notifications')},
+    {path:'/profile',      emoji:'👤', label: t('nav.account')},
   ];
 
   return (

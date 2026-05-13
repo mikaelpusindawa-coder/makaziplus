@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { TopBar } from '../components/layout/TopBar';
 import { PaymentModal } from '../components/common/Spinner';
+import api from '../utils/api';
 
 const Check = () => (
   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-primary flex-shrink-0 mt-0.5" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -33,15 +34,35 @@ const PlanCard = ({featured, borderColor='border-primary', tag, tagBg='bg-primar
 
 export default function Subscription() {
   const navigate = useNavigate();
-  const { user }  = useAuth();
+  const { user, refreshUser }  = useAuth();
   const { toast } = useToast();
-  const [payOpen,  setPayOpen]  = useState(false);
-  const [payConf,  setPayConf]  = useState({plan:'pro', amount:'TSh 30,000'});
+  const [payOpen,   setPayOpen]   = useState(false);
+  const [payConf,   setPayConf]   = useState({plan:'pro', amount:'TSh 30,000'});
+  const [subInfo,   setSubInfo]   = useState(null);
+  const [cancelling,setCancelling]= useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get('/subscription/my').then(r => setSubInfo(r.data.data)).catch(()=>{});
+  }, [user]);
 
   const openPay = (plan, amount) => {
     if (!user) { navigate('/auth'); return; }
     setPayConf({plan, amount});
     setPayOpen(true);
+  };
+
+  const handleCancel = async () => {
+    if (!window.confirm('Una uhakika unataka kufuta usajili wako? Utarudi kwenye Basic mara moja.')) return;
+    setCancelling(true);
+    try {
+      await api.post('/subscription/cancel');
+      toast('Usajili umefutwa kikamilifu.', 'success');
+      setSubInfo(prev => ({ ...prev, subscription: null, plan: 'basic' }));
+      if (refreshUser) refreshUser();
+    } catch (e) {
+      toast(e.response?.data?.message || 'Hitilafu ya kufuta usajili', 'error');
+    } finally { setCancelling(false); }
   };
 
   return (
@@ -61,6 +82,42 @@ export default function Subscription() {
           </div>
         )}
       </div>
+
+      {/* ── Current plan status ── */}
+      {subInfo && (
+        <div className="mx-3 mb-4 bg-white rounded-2xl p-4 shadow-soft border border-surface-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-ink">📊 Matumizi ya Sasa</h3>
+            <span className={`badge ${subInfo.plan==='pro'?'badge-gold':'badge-primary'}`}>
+              {subInfo.plan?.toUpperCase() || 'BASIC'}
+            </span>
+          </div>
+          <div className="mb-2">
+            <div className="flex justify-between text-xs font-medium mb-1">
+              <span className="text-ink-4">Matangazo: {subInfo.used} / {subInfo.limit === 9999 ? '∞' : subInfo.limit}</span>
+              <span className="text-ink-4">{subInfo.limit === 9999 ? '100%' : `${Math.round(((subInfo.used||0)/subInfo.limit)*100)}%`}</span>
+            </div>
+            <div className="h-2 bg-surface-3 rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all"
+                style={{width:`${subInfo.limit===9999?100:Math.min(100,Math.round(((subInfo.used||0)/subInfo.limit)*100))}%`}}/>
+            </div>
+          </div>
+          {subInfo.subscription && (
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-surface-4">
+              <div>
+                <p className="text-xs text-ink-4">Muda wa kumalizika:</p>
+                <p className="text-xs font-semibold text-ink">
+                  {new Date(subInfo.subscription.end_date).toLocaleDateString('sw-TZ')}
+                </p>
+              </div>
+              <button onClick={handleCancel} disabled={cancelling}
+                className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors disabled:opacity-50">
+                {cancelling ? 'Inafuta...' : 'Futa Usajili'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <PlanCard name="Basic" price="Bure" period="/milele"
         features={['Matangazo 3/mwezi','Picha 5 kwa tangazo','Mawasiliano ya msingi','Tafuta na hifadhi mali']}

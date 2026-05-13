@@ -1,20 +1,43 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { TopBar } from '../components/layout/TopBar';
 import { PropertyCard } from '../components/common/PropertyCard';
 import { SkeletonCard, SkeletonListCard } from '../components/common/Spinner';
 import api from '../utils/api';
-import { formatPrice, getPropertyImage, timeAgo } from '../utils/helpers';
+import { formatPrice, getPropertyImage, getPlaceholderImage, timeAgo } from '../utils/helpers';
 
-// Fallback hero images
+// SVG used only as an img onError last-resort (never shown as actual hero slide)
+const _HERO_ERROR_SVG = (() => {
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1B4F72"/><stop offset="1" stop-color="#2E86C1"/></linearGradient></defs><rect width="1200" height="500" fill="url(%23g)"/><text x="600" y="250" text-anchor="middle" font-size="36" font-weight="700" font-family="system-ui,sans-serif" fill="rgba(255,255,255,0.9)">MakaziPlus</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(s)}`;
+})();
+
+// Fallback hero slides — Unsplash property photos, shown ONLY when the platform
+// has zero uploaded property images. The moment any real image is uploaded these
+// are replaced automatically by real listing photos.
 const FALLBACK_HERO_IMAGES = [
-  { id: 1, image_url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80', title: 'Tafuta Nyumba Yako', is_premium: 1 },
-  { id: 2, image_url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=80', title: 'Mali Bora Tanzania', is_premium: 0 },
-  { id: 3, image_url: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=1200&q=80', title: 'Kodisha au Nunua', is_premium: 1 },
-  { id: 4, image_url: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=80', title: 'Nyumba za Kifahari', is_premium: 0 },
+  {
+    id: 'f1', isFallback: true, is_premium: 1,
+    title: 'Tafuta Nyumba Yako',
+    image_url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&h=500&fit=crop&auto=format&q=80',
+  },
+  {
+    id: 'f2', isFallback: true, is_premium: 0,
+    title: 'Mali Bora Tanzania',
+    image_url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&h=500&fit=crop&auto=format&q=80',
+  },
+  {
+    id: 'f3', isFallback: true, is_premium: 1,
+    title: 'Kodisha au Nunua',
+    image_url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=500&fit=crop&auto=format&q=80',
+  },
+  {
+    id: 'f4', isFallback: true, is_premium: 0,
+    title: 'Nyumba za Kifahari',
+    image_url: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1200&h=500&fit=crop&auto=format&q=80',
+  },
 ];
 
 const STATS = [
@@ -37,7 +60,6 @@ const FILTERS = [
 
 // Hero Slider Component with Auto-cycling
 const HeroSlider = ({ properties, loading }) => {
-  const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
   const [touchStart, setTouchStart] = useState(0);
@@ -47,7 +69,7 @@ const HeroSlider = ({ properties, loading }) => {
   useEffect(() => {
     if (heroPaused || loading) return;
     
-    const displayItems = properties.length >= 4 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
+    const displayItems = properties.length > 0 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
     if (displayItems.length <= 1) return;
     
     const interval = setInterval(() => {
@@ -55,7 +77,7 @@ const HeroSlider = ({ properties, loading }) => {
     }, 5000); // Change slide every 5 seconds
     
     return () => clearInterval(interval);
-  }, [heroPaused, loading, properties.length]);
+  }, [heroPaused, loading, properties]);
 
   // Touch handlers for mobile swipe
   const handleTouchStart = (e) => {
@@ -69,7 +91,7 @@ const HeroSlider = ({ properties, loading }) => {
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const difference = touchStart - touchEnd;
-    const displayItems = properties.length >= 4 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
+    const displayItems = properties.length > 0 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
     
     if (difference > 50) {
       // Swipe left - next slide
@@ -96,7 +118,7 @@ const HeroSlider = ({ properties, loading }) => {
     );
   }
 
-  const displayItems = properties.length >= 4 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
+  const displayItems = properties.length > 0 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
   const current = displayItems[currentIndex];
 
   // Manual navigation functions
@@ -134,7 +156,7 @@ const HeroSlider = ({ properties, loading }) => {
         alt={current.title}
         loading="eager"
         className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-        onError={(e) => { e.target.src = FALLBACK_HERO_IMAGES[0].image_url; }}
+        onError={(e) => { e.target.onerror = null; e.target.src = _HERO_ERROR_SVG; }}
       />
       
       {/* Overlay Gradient */}
@@ -229,7 +251,7 @@ const RecentMarquee = ({ items }) => {
                 alt={p.title}
                 className="w-full h-full object-cover"
                 loading="lazy"
-                onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=300&q=50'; }}
+                onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
               />
               <div className="absolute bottom-1.5 left-1.5 bg-black/50 backdrop-blur-sm text-white text-2xs font-bold px-1.5 py-0.5 rounded-full">
                 🆕 {timeAgo(p.created_at)}
@@ -259,7 +281,6 @@ export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { t } = useTranslation();
   const [filter, setFilter] = useState('all');
   const [featured, setFeatured] = useState([]);
   const [newest, setNewest] = useState([]);
@@ -268,8 +289,6 @@ export default function Home() {
   const [loadingF, setLoadingF] = useState(true);
   const [loadingN, setLoadingN] = useState(true);
   const [loadingHero, setLoadingHero] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
-
   const buildParams = useCallback(() => {
     const p = {};
     if (filter === 'nyumba') p.type = 'nyumba';
@@ -280,9 +299,8 @@ export default function Home() {
     else if (filter === 'dar') p.city = 'Dar es Salaam';
     else if (filter === 'mwanza') p.city = 'Mwanza';
     else if (filter === 'arusha') p.city = 'Arusha';
-    if (searchInput) p.search = searchInput;
     return p;
-  }, [filter, searchInput]);
+  }, [filter]);
 
   const fetchFeatured = useCallback(async () => {
     setLoadingF(true);
@@ -311,7 +329,8 @@ export default function Home() {
   const fetchHeroProperties = useCallback(async () => {
     setLoadingHero(true);
     try {
-      const r = await api.get('/properties', { params: { limit: 4 } });
+      // Fetch up to 20 so we can filter to those with real uploaded images
+      const r = await api.get('/properties', { params: { limit: 20 } });
       setHeroProperties(r.data.data || []);
     } catch (err) {
       console.error('Hero fetch error:', err);
@@ -341,10 +360,16 @@ export default function Home() {
     } catch { toast('Hitilafu ya mtandao', 'error'); }
   };
 
+  // Only properties with real uploaded images
+  const heroWithImages = heroProperties.filter(p => Array.isArray(p.images) && p.images.length > 0);
+  const newestWithImages = newest.filter(p => Array.isArray(p.images) && p.images.length > 0);
+  // Marquee: prefer real images; fall back to all only when none have real images
+  const marqueeItems = newestWithImages.length > 0 ? newestWithImages : newest;
+
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-8 page-enter">
       <TopBar />
-      <HeroSlider properties={heroProperties} loading={loadingHero} />
+      <HeroSlider properties={heroWithImages} loading={loadingHero} />
 
       {/* Stats Section */}
       <div className="flex justify-around px-4 py-4 md:max-w-2xl md:mx-auto">
@@ -396,7 +421,7 @@ export default function Home() {
       )}
 
       {/* Newest Properties Marquee */}
-      {newest.length > 0 && (
+      {marqueeItems.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between px-4 mb-2.5">
             <h2 className="text-base font-bold text-ink flex items-center gap-2">
@@ -405,7 +430,7 @@ export default function Home() {
             <button onClick={() => navigate('/search')} className="text-xs font-medium text-primary hover:underline">Zaidi →</button>
           </div>
           <div className="px-4">
-            <RecentMarquee items={newest} />
+            <RecentMarquee items={marqueeItems} />
           </div>
         </div>
       )}

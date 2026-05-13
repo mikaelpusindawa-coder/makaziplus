@@ -5,12 +5,14 @@ import { useToast } from '../context/ToastContext';
 import { TopBar } from '../components/layout/TopBar';
 import { PropertyCard } from '../components/common/PropertyCard';
 import { SkeletonListCard, EmptyState } from '../components/common/Spinner';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 
 export default function Favorites() {
   const navigate = useNavigate();
   const { user }  = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [favs,    setFavs]    = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,17 +31,17 @@ export default function Favorites() {
 
   if (!user) return (
     <div className="min-h-screen bg-surface pb-24">
-      <TopBar title="Zilizohifadhiwa ❤️" showBack/>
-      <EmptyState icon="🔒" title="Ingia kwanza" subtitle="Unahitaji kuingia ili kuona mali uliyohifadhi"
-        action={{label:'Ingia', onClick:()=>navigate('/auth')}}/>
+      <TopBar title={t('favorites.title')} showBack/>
+      <EmptyState icon="🔒" title={t('errors.please_login')} subtitle={t('errors.please_login')}
+        action={{label: t('auth.login'), onClick:()=>navigate('/auth')}}/>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-8 animate-fade-in-up">
-      <TopBar title="Zilizohifadhiwa ❤️" showBack/>
+      <TopBar title={t('favorites.title')} showBack/>
       <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-        <p className="text-sm font-semibold text-ink-4">{favs.length} mali zilizohifadhiwa</p>
+        <p className="text-sm font-semibold text-ink-4">{favs.length} {t('property.properties').toLowerCase()}</p>
       </div>
 
       {loading ? (
@@ -51,8 +53,8 @@ export default function Favorites() {
           ))}
         </div>
       ) : (
-        <EmptyState icon="🤍" title="Bado hujahifadhi mali" subtitle="Bonyeza ❤️ kwenye mali unayoipenda kuihifadhi hapa"
-          action={{label:'Tafuta Mali', onClick:()=>navigate('/search')}}/>
+        <EmptyState icon="🤍" title={t('favorites.empty_title')} subtitle={t('favorites.empty_sub')}
+          action={{label: t('nav.search'), onClick:()=>navigate('/search')}}/>
       )}
     </div>
   );

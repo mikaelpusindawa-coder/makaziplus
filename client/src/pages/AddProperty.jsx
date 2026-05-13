@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { TopBar } from '../components/layout/TopBar';
@@ -165,7 +165,8 @@ const LocationPicker = ({ onLocationSelect, address, setAddress, lat, setLat, ln
 export default function AddProperty() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const editId = searchParams.get('edit');
+  const { id: paramId } = useParams();
+  const editId = paramId || searchParams.get('edit');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -385,21 +386,33 @@ export default function AddProperty() {
           
           amenities.forEach(a => fd.append('amenities', a));
           images.forEach(img => fd.append('images', img));
-          
+
           if (imagesToRemove.length > 0) {
             fd.append('remove_images', JSON.stringify(imagesToRemove));
           }
-          
-          if (videoFile) {
-            fd.append('images', videoFile); // Videos will be handled separately by the backend
-          }
+
           if (videoUrl) {
             fd.append('video_url', videoUrl);
           }
-          
+
           await api.patch(`/properties/${editId}`, fd, {
             headers: { 'Content-Type': 'multipart/form-data' }
           });
+
+          // Upload video file separately using dedicated endpoint
+          if (videoFile) {
+            try {
+              const vfd = new FormData();
+              vfd.append('video', videoFile);
+              await api.post(`/properties/${editId}/video`, vfd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+              });
+            } catch (videoErr) {
+              console.error('Video upload error:', videoErr);
+              toast('Tangazo limesasishwa lakini video haikupakiwa. Jaribu tena.', 'warning');
+            }
+          }
+
           toast('Tangazo limesasishwa! ✅', 'success');
           navigate(`/property/${editId}`);
         }
@@ -420,19 +433,32 @@ export default function AddProperty() {
         
         amenities.forEach(a => fd.append('amenities', a));
         images.forEach(img => fd.append('images', img));
-        
-        if (videoFile) {
-          fd.append('images', videoFile);
-        }
+
         if (videoUrl) {
           fd.append('video_url', videoUrl);
         }
-        
+
         const response = await api.post('/properties', fd, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        
-        setNewPropId(response.data.data?.id);
+
+        const newId = response.data.data?.id;
+        setNewPropId(newId);
+
+        // Upload video file separately using dedicated video endpoint
+        if (videoFile && newId) {
+          try {
+            const vfd = new FormData();
+            vfd.append('video', videoFile);
+            await api.post(`/properties/${newId}/video`, vfd, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            });
+          } catch (videoErr) {
+            console.error('Video upload error:', videoErr);
+            toast('Tangazo limechapishwa lakini video haikupakiwa. Jaribu tena.', 'warning');
+          }
+        }
+
         if (boost !== 'free') {
           setPayOpen(true);
         } else {

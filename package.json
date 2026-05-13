@@ -3,12 +3,11 @@
   "version": "2.0.0",
   "description": "MakaziPlus - Tanzania's #1 Property Platform",
   "scripts": {
-    "setup":       "node setup.js",
-    "dev":         "concurrently \"npm run server\" \"npm run client\"",
-    "server":      "cd server && npm run dev",
-    "client":      "cd client && npm start",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
-    "start":       "npm run install-all && npm run setup && npm run dev"
+    "dev": "concurrently --kill-others-on-fail -n SERVER,CLIENT -c green,cyan \"npm run server\" \"npm run client\"",
+    "server": "npm --prefix server run dev",
+    "client": "npm --prefix client start",
+    "install-all": "npm install && npm --prefix server install && npm --prefix client install",
+    "start": "npm run dev"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatPrice, getPropertyImage } from '../../utils/helpers';
+import { formatPrice, getPropertyImage, getPlaceholderImage } from '../../utils/helpers';
 
 const HeartIcon = ({ filled }) => (
   <svg viewBox="0 0 24 24" className="w-4 h-4 transition-all duration-200"
@@ -25,9 +25,7 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
         <div className="relative w-28 md:w-36 flex-shrink-0 overflow-hidden bg-surface-3">
           <img src={img} alt={p.title} loading="lazy"
             className="w-full h-full object-cover min-h-[88px]"
-            onError={(e) => {
-              e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=300&q=60';
-            }}
+            onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
           />
           {p.is_premium === 1 && (
             <div className="absolute bottom-2 left-2 bg-gold text-white text-2xs font-bold px-2 py-0.5 rounded-full">
@@ -62,6 +60,9 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
               {p.bedrooms > 0 && <span className="badge bg-surface text-ink-4">🛏 {p.bedrooms}</span>}
               {p.bathrooms > 0 && <span className="badge bg-surface text-ink-4">🚿 {p.bathrooms}</span>}
               {p.size_sqm > 0 && <span className="badge bg-surface text-ink-4">📐 {p.size_sqm}m²</span>}
+              {(p.owner_verified === 1 || p.owner_verified === true) && (
+                <span className="badge bg-primary-50 text-primary border border-primary/20" title="Mwenye aliyethibitishwa">✓ Verified</span>
+              )}
             </div>
             {onFav && (
               <button onClick={(e) => { e.stopPropagation(); onFav(p.id); }}
@@ -85,9 +86,7 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
       <div className="relative h-32 md:h-44 overflow-hidden bg-surface-3">
         <img src={img} alt={p.title} loading="lazy"
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-          onError={(e) => {
-            e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=300&q=60';
-          }}
+          onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
         />
         {p.is_premium === 1 && (
           <div className="absolute top-2 left-2 bg-gold text-white text-2xs font-bold px-2.5 py-0.5 rounded-full shadow-gold">

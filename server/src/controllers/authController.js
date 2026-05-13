@@ -2,6 +2,7 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const db       = require('../config/db');
 const { hashToken } = require('../middleware/auth');
+const { sendEmail, templates } = require('../config/email');
 
 const ALLOWED_ROLES = new Set(['customer', 'agent', 'owner']);
 const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v));
@@ -73,6 +74,11 @@ exports.register = async (req, res) => {
       'INSERT INTO audit_log (user_id, action, ip_address, user_agent, status) VALUES (?, ?, ?, ?, ?)',
       [r.insertId, 'REGISTER', req.ip, req.get('user-agent') || '', 'success']
     );
+
+    // Send welcome email (non-blocking)
+    const tpl = templates.welcome(String(name).trim());
+    sendEmail({ to: String(email).trim().toLowerCase(), subject: tpl.subject, html: tpl.html, text: tpl.text })
+      .catch(err => console.error('Welcome email failed:', err.message));
 
     res.status(201).json({ success: true, token, user: user[0] });
   } catch (e) {
@@ -245,7 +251,15 @@ exports.forgotPassword = async (req, res) => {
         'INSERT INTO otp_verifications (user_id, otp_hash, purpose, expires_at) VALUES (?,?,?,?)',
         [rows[0].id, hash, 'password_reset', new Date(Date.now()+10*60000)]
       );
-      console.log(`OTP for user ${rows[0].id}: ${otp}`); // In production: send via SMS/Email
+      // Send OTP via email (non-blocking)
+      const [userRow] = await db.execute('SELECT email FROM users WHERE id = ?', [rows[0].id]);
+      if (userRow.length && userRow[0].email) {
+        const tpl = templates.passwordReset(otp);
+        sendEmail({ to: userRow[0].email, subject: tpl.subject, html: tpl.html, text: tpl.text })
+          .catch(err => console.error('OTP email failed:', err.message));
+      } else {
+        console.log(`OTP for user ${rows[0].id}: ${otp}`); // fallback log if no email
+      }
     }
     res.json({ success:true, message:'Kama akaunti ipo, OTP imetumwa kwenye simu/barua pepe yako.' });
   } catch(e) { res.status(500).json({ success:false, message:'Hitilafu ya seva' }); }

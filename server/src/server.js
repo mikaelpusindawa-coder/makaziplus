@@ -8,19 +8,48 @@ const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const routes = require('./routes/index');
 const db = require('./config/db');
+const { protect } = require('./middleware/auth');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
 
-// Import booking expiry worker
+// Add these with your other route registrations
+const bookingRoutes = require('./routes/bookingRoutes');
+const videoRoutes = require('./videoUpload');
 const startBookingExpiryWorker = require('./bookingExpiryWorker');
+const startSubscriptionExpiryWorker = require('./subscriptionExpiryWorker');
+
+// ============================================================
+// CORS - MUST BE FIRST AND PROPERLY CONFIGURED
+// ============================================================
+const allowedOrigins = ['http://localhost:3000', 'https://makaziplus.vercel.app', process.env.CLIENT_URL || 'http://localhost:3000'];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS allowed origin:', origin);
+      callback(null, true); // Still allow for development
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Length', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
 
 // ============================================================
 // SOCKET.IO WITH AUTHENTICATION
 // ============================================================
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -162,25 +191,14 @@ try {
 app.set('trust proxy', 1);
 
 // ============================================================
-// CORS
-// ============================================================
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
-// ============================================================
 // BODY PARSING
 // ============================================================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================================
-// STATIC FILES FOR UPLOADS (CRITICAL - WITH CORS)
+// STATIC FILES FOR UPLOADS
 // ============================================================
-const fs = require('fs');
 const uploadsDir = path.join(__dirname, '../uploads');
 const propertiesDir = path.join(uploadsDir, 'properties');
 const avatarsDir = path.join(uploadsDir, 'avatars');
@@ -200,7 +218,7 @@ console.log(`   📁 Properties: ${propertiesDir}`);
 console.log(`   📁 Avatars: ${avatarsDir}`);
 console.log(`   📁 Videos: ${videosDir}`);
 
-// Serve uploaded files with proper CORS headers
+// Serve static files with proper CORS
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -210,14 +228,13 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(uploadsDir));
 
 console.log(`✅ Static uploads serving enabled at: /uploads`);
-console.log(`✅ Serving static files from: ${uploadsDir}`);
 
 // ============================================================
 // IP BLOCK MIDDLEWARE
 // ============================================================
 app.use(async (req, res, next) => {
   try {
-    const ip = req.ip;
+    const ip = req.ip || req.connection.remoteAddress;
     const [rows] = await db.execute(
       'SELECT id FROM blocked_ips WHERE ip_address = ? AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1',
       [ip]
@@ -280,6 +297,8 @@ app.use(async (req, res, next) => {
 // ROUTES
 // ============================================================
 app.use('/api', routes);
+app.use('/api/bookings', protect, bookingRoutes);
+app.use('/api/properties', protect, videoRoutes);
 
 // ============================================================
 // HEALTH CHECK
@@ -355,8 +374,22 @@ app.use((err, req, res, _next) => {
 // ============================================================
 // START BOOKING EXPIRY WORKER
 // ============================================================
-// This runs every hour to automatically mark expired bookings as 'completed'
-startBookingExpiryWorker();
+try {
+  startBookingExpiryWorker();
+  console.log('✅ Booking expiry worker started');
+} catch (e) {
+  console.warn('⚠️ bookingExpiryWorker not loaded:', e.message);
+}
+
+// ============================================================
+// START SUBSCRIPTION EXPIRY WORKER
+// ============================================================
+try {
+  startSubscriptionExpiryWorker();
+  console.log('✅ Subscription expiry worker started');
+} catch (e) {
+  console.warn('⚠️ subscriptionExpiryWorker not loaded:', e.message);
+}
 
 // ============================================================
 // START SERVER
@@ -371,7 +404,5 @@ server.listen(PORT, () => {
   console.log(`🛡️ Security: Helmet + Rate Limiting + IP Block`);
   console.log(`💬 Chat system ready - waiting for connections`);
   console.log(`📁 Uploads directory: ${uploadsDir}`);
-  console.log(`📁 Videos directory: ${videosDir}`);
-  console.log(`🕐 Booking expiry worker started - checking every hour`);
   console.log(`========================================\n`);
 });

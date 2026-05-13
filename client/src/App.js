@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-import { LanguageProvider } from './context/LanguageContext';  // ADD THIS
+import { LanguageProvider } from './context/LanguageContext';
 import { BottomNav, DesktopSidebar } from './components/layout/BottomNav';
 import { Spinner } from './components/common/Spinner';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 // Pages
 import Auth from './pages/Auth';
@@ -51,9 +52,19 @@ const GuestGuard = ({ children }) => {
   return children;
 };
 
+// Apply dark mode class to <html> based on stored preference
+const DarkModeProvider = ({ children }) => {
+  useEffect(() => {
+    const theme = localStorage.getItem('mp_theme') || 'light';
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, []);
+  return children;
+};
+
 // Responsive layout wrapper
 const Shell = ({ children }) => {
   const { user, loading } = useAuth();
+  usePushNotifications(user);
   if (loading) return <LoadScreen />;
   return (
     <div className={user ? 'md:flex md:min-h-screen' : ''}>
@@ -86,6 +97,7 @@ function AppRoutes() {
       {/* Protected Routes - Auth Required */}
       <Route path="/chat" element={<Shell><Guard><Chat /></Guard></Shell>} />
       <Route path="/add" element={<Shell><Guard><AddProperty /></Guard></Shell>} />
+      <Route path="/edit/:id" element={<Shell><Guard><AddProperty /></Guard></Shell>} />
       <Route path="/dashboard" element={<Shell><Guard><Dashboard /></Guard></Shell>} />
       <Route path="/favorites" element={<Shell><Guard><Favorites /></Guard></Shell>} />
       <Route path="/notifications" element={<Shell><Guard><Notifications /></Guard></Shell>} />
@@ -108,8 +120,10 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <LanguageProvider>  {/* ADD THIS */}
-            <AppRoutes />
+          <LanguageProvider>
+            <DarkModeProvider>
+              <AppRoutes />
+            </DarkModeProvider>
           </LanguageProvider>
         </ToastProvider>
       </AuthProvider>

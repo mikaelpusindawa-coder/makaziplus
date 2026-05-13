@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { TopBar } from '../components/layout/TopBar';
 import { EmptyState } from '../components/common/Spinner';
 import { timeAgo } from '../utils/helpers';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 
 const TYPE_CFG = {
@@ -18,6 +19,7 @@ const TYPE_CFG = {
 export default function Notifications() {
   const navigate = useNavigate();
   const { user }  = useAuth();
+  const { t } = useTranslation();
   const [notifs,  setNotifs]  = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,17 +41,17 @@ export default function Notifications() {
 
   if (!user) return (
     <div className="min-h-screen bg-surface pb-24">
-      <TopBar title="Arifa 🔔" showBack/>
-      <EmptyState icon="🔔" title="Ingia kwanza" subtitle="Unahitaji kuingia ili kuona arifa"
-        action={{label:'Ingia', onClick:()=>navigate('/auth')}}/>
+      <TopBar title={`${t('notifications.title')} 🔔`} showBack/>
+      <EmptyState icon="🔔" title={t('errors.please_login')} subtitle={t('errors.please_login')}
+        action={{label: t('auth.login'), onClick:()=>navigate('/auth')}}/>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-8 animate-fade-in-up">
-      <TopBar title="Arifa 🔔" showBack
+      <TopBar title={`${t('notifications.title')} 🔔`} showBack
         rightAction={unread>0 ? (
-          <button onClick={markAll} className="text-sm font-semibold text-primary px-2">Soma Zote</button>
+          <button onClick={markAll} className="text-sm font-semibold text-primary px-2">{t('notifications.mark_all_read')}</button>
         ) : undefined}/>
 
       <div className="px-4 py-2.5 flex items-center justify-between border-b border-surface-4">
@@ -83,7 +85,7 @@ export default function Notifications() {
           })}
         </div>
       ) : (
-        <EmptyState icon="🔔" title="Hakuna arifa" subtitle="Arifa zako zitaonekana hapa"/>
+        <EmptyState icon="🔔" title={t('notifications.empty_title')} subtitle={t('notifications.empty_sub')}/>
       )}
     </div>
   );

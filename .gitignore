@@ -33,3 +33,9 @@ Thumbs.db
 # Misc
 coverage/
 .nyc_output/
+
+# Claude Code internal files
+.claude/
+
+# Sensitive backup files
+server/envOriginal.text

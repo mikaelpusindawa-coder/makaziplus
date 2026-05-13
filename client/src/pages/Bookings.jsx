@@ -4,16 +4,18 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { TopBar } from '../components/layout/TopBar';
 import { Spinner, EmptyState } from '../components/common/Spinner';
-import { formatPrice, getPropertyImage, formatDate } from '../utils/helpers';
+import { formatPrice, getPropertyImage, getPlaceholderImage, formatDate, resolveImageUrl } from '../utils/helpers';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 
 // Status badge component
 const StatusBadge = ({ status }) => {
+  const { t } = useTranslation();
   const config = {
-    pending: { color: 'bg-yellow-50 text-yellow-700', icon: '⏳', label: 'Inasubiri' },
-    confirmed: { color: 'bg-green-50 text-green-700', icon: '✅', label: 'Imethibitishwa' },
-    cancelled: { color: 'bg-red-50 text-red-700', icon: '❌', label: 'Imefutwa' },
-    completed: { color: 'bg-blue-50 text-blue-700', icon: '🏁', label: 'Imekamilika' },
+    pending: { color: 'bg-yellow-50 text-yellow-700', icon: '⏳', label: t('bookings.status_pending') },
+    confirmed: { color: 'bg-green-50 text-green-700', icon: '✅', label: t('bookings.status_confirmed') },
+    cancelled: { color: 'bg-red-50 text-red-700', icon: '❌', label: t('bookings.status_cancelled') },
+    completed: { color: 'bg-blue-50 text-blue-700', icon: '🏁', label: t('bookings.status_completed') },
   };
   const c = config[status] || config.pending;
   return (
@@ -28,6 +30,7 @@ const BookingCard = ({ booking, type, onStatusUpdate, onViewProperty }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const checkIn = new Date(booking.check_in_date);
   const checkOut = new Date(booking.check_out_date);
@@ -36,11 +39,19 @@ const BookingCard = ({ booking, type, onStatusUpdate, onViewProperty }) => {
   const isActive = new Date(booking.check_in_date) <= new Date() && new Date(booking.check_out_date) >= new Date();
   const isPast = new Date(booking.check_out_date) < new Date();
 
-  const handleStatusChange = async (newStatus) => {
+  const handleStatusChange = async (newStatus, isCustomerCancel = false) => {
     setUpdating(true);
     try {
-      await api.patch(`/bookings/${booking.id}/status`, { status: newStatus });
-      toast(`Booking ${newStatus === 'confirmed' ? 'imethibitishwa' : 'imefutwa'}!`, 'success');
+      if (isCustomerCancel) {
+        // Customer cancels via dedicated endpoint (properly reverts property_status)
+        await api.patch(`/bookings/${booking.id}/cancel`);
+        toast('Booking imebatilishwa.', 'success');
+      } else {
+        // Owner confirms/rejects/completes
+        await api.patch(`/bookings/${booking.id}/status`, { status: newStatus });
+        const msgs = { confirmed: 'imethibitishwa ✅', cancelled: 'imekataliwa ❌', completed: 'imekamilika 🏁' };
+        toast(`Booking ${msgs[newStatus] || newStatus}`, 'success');
+      }
       onStatusUpdate?.();
     } catch (err) {
       toast(err.response?.data?.message || 'Hitilafu', 'error');
@@ -59,15 +70,15 @@ const BookingCard = ({ booking, type, onStatusUpdate, onViewProperty }) => {
             className="w-12 h-12 rounded-xl overflow-hidden bg-surface-3 flex-shrink-0"
           >
             <img
-              src={booking.property_image || getPropertyImage({ primary_image: booking.property_image, type: 'nyumba' })}
-              alt={booking.title}
+              src={resolveImageUrl(booking.property_image) || getPlaceholderImage(booking.property_type || 'nyumba', booking.property_id)}
+              alt={booking.title || booking.property_title}
               className="w-full h-full object-cover"
               loading="lazy"
-              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=100&q=40'; }}
+              onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(booking.property_type || 'nyumba', booking.property_id); }}
             />
           </button>
           <div>
-            <h3 className="text-sm font-semibold text-ink line-clamp-1">{booking.title}</h3>
+            <h3 className="text-sm font-semibold text-ink line-clamp-1">{booking.title || booking.property_title}</h3>
             <p className="text-2xs text-ink-5">{booking.area}, {booking.city}</p>
           </div>
         </div>
@@ -81,7 +92,7 @@ const BookingCard = ({ booking, type, onStatusUpdate, onViewProperty }) => {
             <span className="text-ink-4">📅</span>
             <div>
               <p className="text-xs font-semibold text-ink">{formatDate(booking.check_in_date)}</p>
-              <p className="text-2xs text-ink-5">Kuingia</p>
+              <p className="text-2xs text-ink-5">{t('bookings.check_in')}</p>
             </div>
           </div>
           <span className="text-ink-4">→</span>
@@ -89,7 +100,7 @@ const BookingCard = ({ booking, type, onStatusUpdate, onViewProperty }) => {
             <span className="text-ink-4">📅</span>
             <div>
               <p className="text-xs font-semibold text-ink">{formatDate(booking.check_out_date)}</p>
-              <p className="text-2xs text-ink-5">Kutoka</p>
+              <p className="text-2xs text-ink-5">{t('bookings.check_out')}</p>
             </div>
           </div>
         </div>
@@ -97,16 +108,16 @@ const BookingCard = ({ booking, type, onStatusUpdate, onViewProperty }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-ink-4">👥</span>
-            <span className="text-xs text-ink">{booking.guests} wageni</span>
+            <span className="text-xs text-ink">{booking.guests} {t('bookings.guest')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-ink-4">🌙</span>
-            <span className="text-xs text-ink">{nights} usiku</span>
+            <span className="text-xs text-ink">{nights} {t('bookings.nights')}</span>
           </div>
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-surface-4">
-          <span className="text-xs text-ink-4">Jumla</span>
+          <span className="text-xs text-ink-4">{t('bookings.total_amount')}</span>
           <span className="font-serif text-base font-semibold text-primary">{formatPrice(booking.total_amount)}</span>
         </div>
 
@@ -138,7 +149,7 @@ const BookingCard = ({ booking, type, onStatusUpdate, onViewProperty }) => {
           )}
         </div>
 
-        {/* Action buttons for owner */}
+        {/* Action buttons for owner — pending */}
         {type === 'owner' && booking.status === 'pending' && (
           <div className="flex gap-2 mt-3 pt-2 border-t border-surface-4">
             <button
@@ -146,26 +157,38 @@ const BookingCard = ({ booking, type, onStatusUpdate, onViewProperty }) => {
               disabled={updating}
               className="flex-1 py-2 bg-green-600 text-white rounded-xl text-xs font-bold active:scale-[.98] transition-all flex items-center justify-center gap-1"
             >
-              ✅ Thibitisha
+              {updating ? '...' : `✅ ${t('bookings.confirm_action')}`}
             </button>
             <button
               onClick={() => handleStatusChange('cancelled')}
               disabled={updating}
               className="flex-1 py-2 bg-red-600 text-white rounded-xl text-xs font-bold active:scale-[.98] transition-all flex items-center justify-center gap-1"
             >
-              ❌ Kataa
+              {updating ? '...' : `❌ ${t('bookings.reject_action')}`}
+            </button>
+          </div>
+        )}
+        {/* Owner marks confirmed booking as complete */}
+        {type === 'owner' && booking.status === 'confirmed' && (
+          <div className="mt-3 pt-2 border-t border-surface-4">
+            <button
+              onClick={() => handleStatusChange('completed')}
+              disabled={updating}
+              className="w-full py-2 bg-blue-600 text-white rounded-xl text-xs font-bold active:scale-[.98] transition-all flex items-center justify-center gap-1"
+            >
+              {updating ? '...' : '🏁 Kamilisha Booking'}
             </button>
           </div>
         )}
 
         {/* Action buttons for customer */}
-        {type === 'customer' && booking.status === 'pending' && (
+        {type === 'customer' && (booking.status === 'pending' || booking.status === 'confirmed') && (
           <button
-            onClick={() => handleStatusChange('cancelled')}
+            onClick={() => handleStatusChange('cancelled', true)}
             disabled={updating}
             className="w-full mt-3 py-2 border-2 border-red-300 text-red-600 rounded-xl text-xs font-bold active:scale-[.98] transition-all"
           >
-            Ghairi Booking
+            {t('bookings.cancel_booking')}
           </button>
         )}
       </div>
@@ -196,6 +219,7 @@ export default function Bookings() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState('customer'); // 'customer' or 'owner'
   const [bookings, setBookings] = useState([]);
@@ -279,12 +303,12 @@ export default function Bookings() {
   if (!user) {
     return (
       <div className="min-h-screen bg-surface pb-24">
-        <TopBar title="Bookings Zangu" showBack />
+        <TopBar title={t('bookings.my_bookings')} showBack />
         <EmptyState
           icon="📅"
-          title="Ingia kwanza"
-          subtitle="Unahitaji kuingia ili kuona bookings zako"
-          action={{ label: 'Ingia', onClick: () => navigate('/auth') }}
+          title={t('errors.please_login')}
+          subtitle={t('errors.please_login')}
+          action={{ label: t('auth.login'), onClick: () => navigate('/auth') }}
         />
       </div>
     );
@@ -292,7 +316,7 @@ export default function Bookings() {
 
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-8 animate-fade-in-up">
-      <TopBar title="📅 Bookings Zangu" showBack />
+      <TopBar title={`📅 ${t('bookings.my_bookings')}`} showBack />
 
       {/* Role Tabs */}
       <div className="bg-white border-b border-surface-4 px-4">
@@ -300,13 +324,13 @@ export default function Bookings() {
           <Tab
             active={activeTab === 'customer'}
             onClick={() => setActiveTab('customer')}
-            label="Kama Mteja"
+            label={t('bookings.as_customer')}
             count={activeTab === 'customer' ? bookings.length : 0}
           />
           <Tab
             active={activeTab === 'owner'}
             onClick={() => setActiveTab('owner')}
-            label="Kama Mwenye Nyumba"
+            label={t('bookings.as_owner')}
             count={activeTab === 'owner' ? bookings.length : 0}
           />
         </div>
@@ -316,10 +340,10 @@ export default function Bookings() {
       {bookings.length > 0 && (
         <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-3 border-b border-surface-4">
           {[
-            { id: 'all', label: 'Zote', icon: '📋' },
-            { id: 'upcoming', label: 'Zinazokuja', icon: '🔜' },
-            { id: 'past', label: 'Zilizopita', icon: '📅' },
-            { id: 'pending', label: 'Zinazosubiri', icon: '⏳' },
+            { id: 'all', label: t('common.all'), icon: '📋' },
+            { id: 'upcoming', label: t('bookings.upcoming'), icon: '🔜' },
+            { id: 'past', label: t('bookings.past'), icon: '📅' },
+            { id: 'pending', label: t('bookings.pending_status'), icon: '⏳' },
           ].map(f => (
             <button
               key={f.id}
@@ -358,12 +382,10 @@ export default function Bookings() {
       ) : (
         <EmptyState
           icon="📅"
-          title="Hakuna bookings"
-          subtitle={activeTab === 'customer' 
-            ? "Hujafanya booking yoyote bado. Tafuta nyumba na uanze kuweka booking."
-            : "Hakuna bookings za mali zako bado. Wateja wataweka booking hapa."}
+          title={t('bookings.no_bookings')}
+          subtitle={t('bookings.no_bookings_sub')}
           action={activeTab === 'customer' ? {
-            label: 'Tafuta Nyumba',
+            label: t('nav.search'),
             onClick: () => navigate('/search')
           } : undefined}
         />

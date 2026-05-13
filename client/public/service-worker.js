@@ -19,3 +19,32 @@ self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))));
   self.clients.claim();
 });
+
+// ── Push notification handler ─────────────────────────────────────────────────
+self.addEventListener('push', event => {
+  let data = { title: 'MakaziPlus', body: 'Ujumbe mpya', url: '/' };
+  try { data = { ...data, ...event.data.json() }; } catch {}
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/logo192.png',
+      badge: '/logo192.png',
+      tag: data.url,
+      data: { url: data.url },
+      vibrate: [200, 100, 200],
+    })
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.includes(url));
+      if (existing) return existing.focus();
+      return clients.openWindow(url);
+    })
+  );
+});

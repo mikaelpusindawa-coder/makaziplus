@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { TopBar } from '../components/layout/TopBar';
 import { Spinner, EmptyState } from '../components/common/Spinner';
-import { formatPrice, getAvatar, formatDate } from '../utils/helpers';
+import { formatPrice, getAvatar, formatDate, getPropertyImage } from '../utils/helpers';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
@@ -53,167 +53,244 @@ const BarRow = ({ label, count, max }) => (
   </div>
 );
 
-// Verification Request Card
-const VerificationCard = ({ request, onApprove, onReject, onViewDetails }) => {
-  const [expanded, setExpanded] = useState(false);
+// ── Verification helpers ──────────────────────────────────────────────────────
+const validateNida = (num) => {
+  const d = (num || '').replace(/\D/g, '');
+  const formatted = d.length === 20
+    ? `${d.slice(0,4)}-${d.slice(4,9)}-${d.slice(9,14)}-${d.slice(14,18)}-${d.slice(18)}`
+    : d;
+  return { digits: d.length, valid: d.length === 20, formatted };
+};
+
+const validatePhone = (phone) => {
+  if (!phone) return { valid: false, detail: 'Simu haijawekwa' };
+  const c = phone.replace(/[\s\-\(\)]/g, '');
+  if (/^(\+255|0)[67]\d{8}$/.test(c)) return { valid: true, detail: 'Namba sahihi ya TZ ✓' };
+  return { valid: false, detail: 'Muundo si wa Tanzania (+255 au 0)' };
+};
+
+const validateName = (name) => {
+  if (!name || name.trim().length < 3) return { valid: false, detail: 'Jina halijawekwa' };
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return { valid: false, detail: 'Inahitaji jina + ukoo' };
+  return { valid: true, detail: `Majina ${parts.length} ✓` };
+};
+
+const QUICK_REJECT = [
+  'Picha za kitambulisho hazionekani vizuri',
+  'Namba ya NIDA si sahihi — lazima iwe tarakimu 20',
+  'Jina halifanani na kitambulisho',
+  'Selfie haionekani wazi au haina kitambulisho',
+  'Kitambulisho kimepita muda wake',
+  'Namba ya simu haifanani na jina la NIDA',
+  'Taarifa hazikamiliki — tuma tena nyaraka zote',
+];
+
+const CheckRow = ({ label, value, ok, detail, mono }) => (
+  <div className={`rounded-xl p-3 border ${ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+    <div className="flex items-center justify-between mb-1">
+      <span className="text-2xs font-bold text-ink-5 uppercase tracking-wide">{label}</span>
+      <span className="text-base">{ok ? '✅' : '❌'}</span>
+    </div>
+    <div className={`text-xs font-semibold break-all ${ok ? 'text-green-800' : 'text-red-700'} ${mono ? 'font-mono tracking-wider' : ''}`}>
+      {value || '—'}
+    </div>
+    {detail && <div className={`text-2xs mt-0.5 ${ok ? 'text-green-600' : 'text-red-600'}`}>{detail}</div>}
+  </div>
+);
+
+const DocPhoto = ({ label, src, icon }) => (
+  <div>
+    <p className="text-2xs font-bold text-ink-5 uppercase tracking-wide mb-1.5">{icon} {label}</p>
+    {src ? (
+      <div className="relative w-full h-32 rounded-xl overflow-hidden border-2 border-surface-4 cursor-pointer group"
+        onClick={() => window.open(src, '_blank')}>
+        <img src={src} alt={label} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+          <span className="opacity-0 group-hover:opacity-100 text-white text-2xs font-bold bg-black/60 px-2 py-1 rounded-full">
+            🔍 Panua
+          </span>
+        </div>
+      </div>
+    ) : (
+      <div className="w-full h-32 rounded-xl border-2 border-dashed border-surface-4 bg-surface-2 flex items-center justify-center">
+        <span className="text-xs text-ink-5">Haijapakuliwa</span>
+      </div>
+    )}
+  </div>
+);
+
+// Verification Request Card — full inspection panel
+const VerificationCard = ({ request, onApprove, onReject }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const nida      = request.id_type === 'nida' ? validateNida(request.id_number) : null;
+  const phoneChk  = validatePhone(request.phone);
+  const nameChk   = validateName(request.name);
+  const idChk     = (() => {
+    if (!request.id_number) return { valid: false, detail: 'Namba haijawekwa' };
+    if (nida) return { valid: nida.valid, detail: nida.valid ? '20/20 tarakimu ✓' : `${nida.digits}/20 tarakimu` };
+    if (request.id_type === 'passport') return { valid: /^[A-Z0-9]{6,9}$/i.test(request.id_number), detail: 'Muundo wa Pasipoti' };
+    return { valid: request.id_number.length >= 5, detail: 'Leseni' };
+  })();
+
+  const allPass = nameChk.valid && phoneChk.valid && idChk.valid;
+  const hasDocs = request.id_document_front || request.id_document_back || request.selfie_url;
+
   const handleApprove = async () => {
     if (!window.confirm(`Thibitisha akaunti ya ${request.name}?`)) return;
     setActionLoading(true);
-    try {
-      await onApprove(request.user_id);
-    } finally {
-      setActionLoading(false);
-    }
+    try { await onApprove(request.user_id); } finally { setActionLoading(false); }
   };
 
   const handleReject = async () => {
-    if (!rejectReason.trim()) {
-      alert('Tafadhali weka sababu ya kukataa');
-      return;
-    }
+    if (!rejectReason.trim()) { alert('Weka sababu ya kukataa'); return; }
     setActionLoading(true);
     try {
       await onReject(request.user_id, rejectReason);
       setShowRejectModal(false);
       setRejectReason('');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const statusColors = {
-    pending: 'bg-yellow-50 text-yellow-700',
-    approved: 'bg-green-50 text-green-700',
-    rejected: 'bg-red-50 text-red-700',
-    requires_resubmission: 'bg-orange-50 text-orange-700',
+    } finally { setActionLoading(false); }
   };
 
   return (
-    <div className="border-b border-surface-4 last:border-0">
-      <div className="p-4 hover:bg-surface/50 transition-colors">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-primary">{request.name?.charAt(0) || 'U'}</span>
+    <div className="bg-white rounded-2xl border border-surface-4 shadow-soft mb-4 overflow-hidden">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className={`px-4 py-3 flex items-center justify-between flex-wrap gap-3 border-b
+        ${request.status === 'pending' ? 'bg-yellow-50 border-yellow-100' :
+          request.status === 'approved' ? 'bg-green-50 border-green-100' :
+          'bg-red-50 border-red-100'}`}>
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-white border-2 border-white shadow-soft flex items-center justify-center font-bold text-primary text-base flex-shrink-0">
+            {request.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
-          
-          <div className="flex-1 min-w-0">
+          <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold text-ink">{request.name}</span>
+              <span className="text-sm font-bold text-ink">{request.name}</span>
               <Badge color={request.id_type === 'nida' ? 'purple' : request.id_type === 'passport' ? 'blue' : 'gold'}>
                 {request.id_type?.toUpperCase()}
               </Badge>
-              <span className={`text-2xs font-bold px-2 py-0.5 rounded-full ${statusColors[request.status]}`}>
-                {request.status === 'pending' ? '⏳ Inasubiri' :
+              <span className={`text-2xs font-bold px-2 py-0.5 rounded-full ${
+                request.status === 'pending'  ? 'bg-yellow-100 text-yellow-700' :
+                request.status === 'approved' ? 'bg-green-100  text-green-700'  :
+                                                'bg-red-100    text-red-700'}`}>
+                {request.status === 'pending'  ? '⏳ Inasubiri' :
                  request.status === 'approved' ? '✅ Imethibitishwa' :
-                 request.status === 'rejected' ? '❌ Imekataliwa' : '📝 Inahitaji Kurekebishwa'}
+                 request.status === 'rejected' ? '❌ Imekataliwa' : '📝 Resubmit'}
               </span>
+              {request.status === 'pending' && (
+                <span className={`text-2xs font-bold px-2 py-0.5 rounded-full ${allPass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {allPass ? '🟢 Checks OK' : '🔴 Issues Found'}
+                </span>
+              )}
             </div>
-            <div className="text-xs text-ink-4 mt-0.5">{request.email}</div>
-            <div className="text-2xs text-ink-5 mt-0.5">📞 {request.phone}</div>
-            <div className="text-2xs text-ink-5">🆔 {request.id_number}</div>
-            <div className="text-2xs text-ink-5">📅 Iliyotumwa: {formatDate(request.created_at)}</div>
-
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-xs text-primary font-medium mt-2 flex items-center gap-1 hover:underline"
-            >
-              {expanded ? '▼' : '▶'} {expanded ? 'Funga' : 'Ona Picha'}
-            </button>
-
-            {expanded && (
-              <div className="mt-3 pt-3 border-t border-surface-4">
-                <div className="grid grid-cols-3 gap-2">
-                  {request.id_document_front && (
-                    <div>
-                      <p className="text-2xs text-ink-5 mb-1">Mbele ya Kitambulisho</p>
-                      <img
-                        src={request.id_document_front}
-                        alt="ID Front"
-                        className="w-full h-24 object-cover rounded-lg border border-surface-4 cursor-pointer"
-                        onClick={() => window.open(request.id_document_front, '_blank')}
-                      />
-                    </div>
-                  )}
-                  {request.id_document_back && (
-                    <div>
-                      <p className="text-2xs text-ink-5 mb-1">Nyuma ya Kitambulisho</p>
-                      <img
-                        src={request.id_document_back}
-                        alt="ID Back"
-                        className="w-full h-24 object-cover rounded-lg border border-surface-4 cursor-pointer"
-                        onClick={() => window.open(request.id_document_back, '_blank')}
-                      />
-                    </div>
-                  )}
-                  {request.selfie_url && (
-                    <div>
-                      <p className="text-2xs text-ink-5 mb-1">Selfie na Kitambulisho</p>
-                      <img
-                        src={request.selfie_url}
-                        alt="Selfie"
-                        className="w-full h-24 object-cover rounded-lg border border-surface-4 cursor-pointer"
-                        onClick={() => window.open(request.selfie_url, '_blank')}
-                      />
-                    </div>
-                  )}
-                </div>
-                {request.admin_notes && (
-                  <div className="mt-3 p-2 bg-red-50 rounded-lg">
-                    <p className="text-2xs text-red-600 font-semibold">Sababu ya Kukataliwa:</p>
-                    <p className="text-xs text-red-700">{request.admin_notes}</p>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="text-2xs text-ink-5 mt-0.5">{request.email} · 📅 {formatDate(request.created_at)}</div>
           </div>
-
-          {request.status === 'pending' && (
-            <div className="flex gap-2 flex-shrink-0">
-              <button
-                onClick={handleApprove}
-                disabled={actionLoading}
-                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition-colors disabled:opacity-50"
-              >
-                ✅ Thibitisha
-              </button>
-              <button
-                onClick={() => setShowRejectModal(true)}
-                disabled={actionLoading}
-                className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                ❌ Kataa
-              </button>
-            </div>
-          )}
         </div>
+
+        {request.status === 'pending' && (
+          <div className="flex gap-2 flex-shrink-0">
+            <button onClick={handleApprove} disabled={actionLoading}
+              className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm">
+              ✅ Thibitisha
+            </button>
+            <button onClick={() => setShowRejectModal(true)} disabled={actionLoading}
+              className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm">
+              ❌ Kataa
+            </button>
+          </div>
+        )}
       </div>
 
-      {showRejectModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-          onClick={(e) => e.target === e.currentTarget && setShowRejectModal(false)}
-        >
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
-            <h3 className="font-semibold text-ink mb-3">Kataa Uthibitisho</h3>
-            <p className="text-sm text-ink-5 mb-3">Sababu ya kukataa:</p>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Mfano: Picha hazionekani vizuri, namba si sahihi..."
-              rows={3}
-              className="input-field mb-4"
+      <div className="p-4 space-y-4">
+
+        {/* ── Validation Checks ────────────────────────────────────────────── */}
+        <div>
+          <p className="text-2xs font-bold text-ink-4 uppercase tracking-widest mb-2">🔍 Ukaguzi wa Taarifa</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <CheckRow label="Jina Kamili" value={request.name} ok={nameChk.valid} detail={nameChk.detail} />
+            <CheckRow label="Namba ya Simu" value={request.phone} ok={phoneChk.valid} detail={phoneChk.detail} />
+            <CheckRow
+              label={nida ? `NIDA · ${nida.digits}/20 tarakimu` : request.id_type === 'passport' ? 'Pasipoti' : 'Leseni'}
+              value={nida ? nida.formatted : request.id_number}
+              ok={idChk.valid}
+              detail={idChk.detail}
+              mono
             />
+          </div>
+        </div>
+
+        {/* ── NIDA detail bar ──────────────────────────────────────────────── */}
+        {nida && (
+          <div className={`rounded-xl px-4 py-2.5 flex items-center gap-3 ${nida.valid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+            <span className="text-lg">{nida.valid ? '✅' : '❌'}</span>
+            <div className="flex-1">
+              <div className={`text-xs font-bold ${nida.valid ? 'text-green-700' : 'text-red-700'}`}>
+                {nida.valid ? 'NIDA yenye tarakimu 20 — Muundo Sahihi' : `NIDA ina tarakimu ${nida.digits} — Inahitaji tarakimu 20 hasa`}
+              </div>
+              <div className="font-mono text-xs text-ink-4 mt-0.5 tracking-widest">{nida.formatted || '—'}</div>
+            </div>
+            <div className={`text-2xl font-bold ${nida.valid ? 'text-green-400' : 'text-red-300'}`}>
+              {nida.digits}/20
+            </div>
+          </div>
+        )}
+
+        {/* ── Documents (always visible) ───────────────────────────────────── */}
+        <div>
+          <p className="text-2xs font-bold text-ink-4 uppercase tracking-widest mb-2">
+            📄 Nyaraka za Utambulisho
+            {!hasDocs && <span className="ml-2 text-red-500 normal-case">— Hakuna nyaraka zilizopakiwa</span>}
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <DocPhoto label="Mbele ya ID" src={request.id_document_front} icon="🪪" />
+            <DocPhoto label="Nyuma ya ID"  src={request.id_document_back}   icon="🔄" />
+            <DocPhoto label="Selfie + ID"  src={request.selfie_url}          icon="🤳" />
+          </div>
+        </div>
+
+        {/* ── Rejection notes ──────────────────────────────────────────────── */}
+        {request.admin_notes && (
+          <div className="p-3 bg-red-50 rounded-xl border border-red-100">
+            <p className="text-2xs font-bold text-red-600 uppercase tracking-wide mb-1">Sababu ya Kukataliwa</p>
+            <p className="text-xs text-red-700">{request.admin_notes}</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Reject Modal ─────────────────────────────────────────────────────── */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+          onClick={(e) => e.target === e.currentTarget && setShowRejectModal(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl">
+            <h3 className="font-bold text-ink text-base mb-1">Kataa Ombi la Uthibitisho</h3>
+            <p className="text-sm text-ink-5 mb-3">Chagua sababu au andika yako:</p>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {QUICK_REJECT.map(r => (
+                <button key={r} onClick={() => setRejectReason(r)}
+                  className={`text-2xs px-2.5 py-1 rounded-full border transition-all ${
+                    rejectReason === r
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'border-surface-4 text-ink-4 hover:border-red-300 hover:text-red-600'}`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Au andika sababu yako hapa..."
+              rows={3} className="input-field mb-4 text-sm" />
             <div className="flex gap-3">
-              <button onClick={() => setShowRejectModal(false)} className="flex-1 py-2 border border-surface-4 rounded-xl text-sm font-medium">
+              <button onClick={() => setShowRejectModal(false)}
+                className="flex-1 py-2.5 border border-surface-4 rounded-xl text-sm font-medium hover:bg-surface-2 transition-colors">
                 Ghairi
               </button>
-              <button onClick={handleReject} className="flex-1 py-2 bg-red-600 text-white rounded-xl text-sm font-bold">
-                Kataa
+              <button onClick={handleReject} disabled={actionLoading || !rejectReason.trim()}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-50 transition-colors">
+                {actionLoading ? 'Inafanya...' : 'Kataa'}
               </button>
             </div>
           </div>
@@ -556,7 +633,7 @@ export default function Admin() {
               {props.map(p => (
                 <div key={p.id} className="flex items-center gap-3 px-4 py-3 border-b border-black/4 last:border-0">
                   <button onClick={() => navigate(`/property/${p.id}`)} className="w-12 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-surface-3">
-                    <img src={p.primary_image || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=100&q=40'} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    <img src={getPropertyImage(p)} alt="" className="w-full h-full object-cover" loading="lazy" onError={(e)=>{e.target.onerror=null;e.target.src=getPropertyImage({type:p.type||'nyumba',id:p.id});}} />
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-semibold text-ink truncate">{p.title}</div>

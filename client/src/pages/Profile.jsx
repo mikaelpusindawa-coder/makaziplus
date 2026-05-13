@@ -212,6 +212,9 @@ export default function Profile() {
       } else {
         i18n.changeLanguage('sw');
       }
+      // Apply dark mode immediately and persist
+      localStorage.setItem('mp_theme', settings.theme || 'light');
+      document.documentElement.classList.toggle('dark', settings.theme === 'dark');
       toast('Mipangilio imehifadhiwa! ✅', 'success');
       setSettingsModalOpen(false);
     } catch (e) {
@@ -279,14 +282,10 @@ export default function Profile() {
     <div className="min-h-screen bg-surface pb-24 md:pb-8 animate-fade-in-up">
       <TopBar title={t('nav.profile') || 'Akaunti Yangu'} showBack />
 
-      {/* Cover Image */}
-      <div className="h-32 relative overflow-hidden">
-        <img
-          src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=60"
-          alt="cover"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-ink/60 to-primary/60" />
+      {/* Cover */}
+      <div className="h-32 relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #1B4F72 0%, #2E86C1 55%, #0B5345 100%)' }}>
+        <div className="absolute inset-0 bg-gradient-to-br from-black/20 to-black/40" />
       </div>
 
       {/* Avatar */}
