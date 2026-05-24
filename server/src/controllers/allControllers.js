@@ -351,8 +351,6 @@ exports.createReview = async (req, res) => {
 // PAYMENTS
 // ============================================================
 
-// ── Payment gateway helpers ────────────────────────────────────────────────────
-
 async function activatePlanForUser(userId, plan, propertyId) {
   if (plan === 'pro' || plan === 'owner') {
     await db.execute('UPDATE users SET plan = ? WHERE id = ?', [plan, userId]);
@@ -381,13 +379,11 @@ async function activatePlanForUser(userId, plan, propertyId) {
 }
 
 async function sendMpesaPush(phone, amount, txnId, paymentDbId, userId, plan, propertyId) {
-  // AzamPay M-Pesa Tanzania integration
   const AZAM_APP_NAME = process.env.AZAM_APP_NAME;
   const AZAM_CLIENT_ID = process.env.AZAM_CLIENT_ID;
   const AZAM_CLIENT_SECRET = process.env.AZAM_CLIENT_SECRET;
 
   if (!AZAM_CLIENT_ID || !AZAM_CLIENT_SECRET) {
-    // Sandbox mode: auto-complete after 4s
     setTimeout(async () => {
       try {
         await db.execute('UPDATE payments SET status = ?, gateway_ref = ?, completed_at = NOW() WHERE id = ?', ['completed', 'SANDBOX_' + txnId, paymentDbId]);
@@ -398,7 +394,6 @@ async function sendMpesaPush(phone, amount, txnId, paymentDbId, userId, plan, pr
     return { status: 'pending', note: 'sandbox' };
   }
 
-  // Live AzamPay: get access token then push USSD
   const axios = require('axios');
   try {
     const tokenRes = await axios.post('https://authenticator.azampay.co.tz/AppRegistration/GenerateToken', {
@@ -407,7 +402,7 @@ async function sendMpesaPush(phone, amount, txnId, paymentDbId, userId, plan, pr
     const token = tokenRes.data?.data?.accessToken;
     if (!token) throw new Error('No access token from AzamPay');
 
-    const provider = 'Mpesa'; // AzamPay provider name
+    const provider = 'Mpesa';
     const pushRes = await axios.post('https://checkout.azampay.co.tz/azampay/mno/checkout', {
       accountNumber: phone.replace(/^\+/, '').replace(/^255/, ''),
       additionalProperties: {},
@@ -426,7 +421,6 @@ async function sendMpesaPush(phone, amount, txnId, paymentDbId, userId, plan, pr
     throw new Error(pushRes.data?.message || 'AzamPay push failed');
   } catch (e) {
     console.error('[AzamPay]', e.message);
-    // Fall back to sandbox on live API error
     setTimeout(async () => {
       try {
         await db.execute('UPDATE payments SET status = ?, completed_at = NOW() WHERE id = ?', ['completed', paymentDbId]);
@@ -444,7 +438,7 @@ async function createStripeIntent(amount, currency = 'tzs') {
     const Stripe = require('stripe');
     const stripe = new Stripe(STRIPE_SECRET, { apiVersion: '2023-10-16' });
     const intent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe uses cents
+      amount: Math.round(amount * 100),
       currency,
       automatic_payment_methods: { enabled: true },
     });
@@ -488,7 +482,6 @@ exports.initiatePayment = async (req, res) => {
     const pid = r.insertId;
 
     if (method === 'card') {
-      // Stripe card payment
       const intent = await createStripeIntent(safeAmount);
       if (intent) {
         await db.execute('UPDATE payments SET gateway_ref = ? WHERE id = ?', [intent.id, pid]);
@@ -498,13 +491,11 @@ exports.initiatePayment = async (req, res) => {
           message: 'Ingiza maelezo ya kadi kukamilisha malipo.',
         });
       }
-      // Stripe not configured — sandbox
       setTimeout(async () => {
         await db.execute('UPDATE payments SET status = ?, completed_at = NOW() WHERE id = ?', ['completed', pid]);
         await activatePlanForUser(req.user.id, plan, safePropId);
       }, 3000);
     } else {
-      // M-Pesa / mobile money via AzamPay
       await sendMpesaPush(safePhone, safeAmount, txnId, pid, req.user.id, plan, safePropId);
     }
 
@@ -520,14 +511,12 @@ exports.initiatePayment = async (req, res) => {
   }
 };
 
-// ── Payment webhook (Stripe + AzamPay callback) ───────────────────────────────
 exports.paymentWebhook = async (req, res) => {
   try {
     const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
     const signature = req.headers['stripe-signature'];
 
     if (signature && STRIPE_WEBHOOK_SECRET) {
-      // Stripe webhook
       const Stripe = require('stripe');
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
       let event;
@@ -547,7 +536,6 @@ exports.paymentWebhook = async (req, res) => {
       return res.json({ received: true });
     }
 
-    // AzamPay callback
     const { transactionId, msisdn, amount, reference, status } = req.body;
     if (reference && status === 'success') {
       const [[payment]] = await db.execute('SELECT * FROM payments WHERE transaction_id = ?', [reference]);
@@ -563,7 +551,6 @@ exports.paymentWebhook = async (req, res) => {
   }
 };
 
-// ── Get payment status ─────────────────────────────────────────────────────────
 exports.getPaymentStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -589,7 +576,7 @@ exports.getPaymentHistory = async (req, res) => {
 };
 
 // ============================================================
-// USER RATINGS (Rate Agents/Owners)
+// USER RATINGS
 // ============================================================
 
 exports.createUserRating = async (req, res) => {
@@ -656,7 +643,6 @@ exports.createBooking = async (req, res) => {
   const { property_id, check_in_date, check_out_date, guests, special_requests } = req.body;
   const propId = parseInt(property_id);
 
-  // ── Basic validation ────────────────────────────────────────────────────────
   if (!propId || isNaN(propId))
     return res.status(400).json({ success: false, message: 'Property ID si sahihi' });
 
@@ -667,12 +653,10 @@ exports.createBooking = async (req, res) => {
 
   const guestsNum = Math.max(1, Math.min(20, parseInt(guests) || 1));
 
-  // ── Atomic transaction with row-level lock ──────────────────────────────────
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
-    // Lock the property row — two simultaneous requests will queue here
     const [[property]] = await conn.execute(
       `SELECT id, owner_id, price, title, property_status, status
        FROM properties WHERE id = ? FOR UPDATE`,
@@ -692,7 +676,6 @@ exports.createBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Huwezi kuhifadhi mali yako mwenyewe' });
     }
 
-    // ── Overlap check: does any active booking overlap these dates? ────────────
     const [[{ overlap }]] = await conn.execute(
       `SELECT COUNT(*) AS overlap FROM bookings
        WHERE property_id = ?
@@ -710,7 +693,6 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // ── Prevent same user from double-booking same property ───────────────────
     const [[{ ownBooking }]] = await conn.execute(
       `SELECT COUNT(*) AS ownBooking FROM bookings
        WHERE property_id = ? AND user_id = ?
@@ -726,11 +708,9 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // ── Calculate total ───────────────────────────────────────────────────────
     const days        = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
     const totalAmount = parseFloat(property.price) * days;
 
-    // ── Insert booking ────────────────────────────────────────────────────────
     const [r] = await conn.execute(
       `INSERT INTO bookings
          (property_id, user_id, owner_id, check_in_date, check_out_date,
@@ -741,7 +721,6 @@ exports.createBooking = async (req, res) => {
        guestsNum, totalAmount, special_requests || null]
     );
 
-    // ── Notify property owner ─────────────────────────────────────────────────
     await conn.execute(
       `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
        VALUES (?, ?, ?, 'system', ?, 'booking', NOW())`,
@@ -755,7 +734,6 @@ exports.createBooking = async (req, res) => {
 
     await conn.commit();
 
-    // Push notification to owner (best-effort, after commit)
     sendPushToUser(property.owner_id, {
       title: 'Ombi Jipya la Uhifadhi 📅',
       body: `${req.user.name} anataka kuhifadhi "${property.title}"`,
@@ -853,9 +831,7 @@ exports.updateBookingStatus = async (req, res) => {
     await conn.execute('UPDATE bookings SET status = ? WHERE id = ?', [status, bookingId]);
 
     if (status === 'confirmed') {
-      // Mark property as rented
       await conn.execute('UPDATE properties SET property_status = ? WHERE id = ?', ['rented', booking.property_id]);
-      // Notify tenant
       await conn.execute(
         `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
          VALUES (?, ?, ?, 'system', ?, 'booking', NOW())`,
@@ -864,7 +840,6 @@ exports.updateBookingStatus = async (req, res) => {
          bookingId]
       );
     } else if (status === 'cancelled') {
-      // Only revert to available if no other active bookings exist
       const [[{ others }]] = await conn.execute(
         `SELECT COUNT(*) AS others FROM bookings WHERE property_id = ? AND status NOT IN ('cancelled','completed') AND id != ?`,
         [booking.property_id, bookingId]
@@ -872,7 +847,6 @@ exports.updateBookingStatus = async (req, res) => {
       if (others === 0) {
         await conn.execute('UPDATE properties SET property_status = ? WHERE id = ?', ['available', booking.property_id]);
       }
-      // Notify tenant
       await conn.execute(
         `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
          VALUES (?, ?, ?, 'system', ?, 'booking', NOW())`,
@@ -884,7 +858,6 @@ exports.updateBookingStatus = async (req, res) => {
 
     await conn.commit();
 
-    // Push notifications (after commit, best-effort)
     if (status === 'confirmed') {
       sendPushToUser(booking.user_id, {
         title: 'Booking Imethibitishwa ✅',
@@ -951,19 +924,18 @@ exports.updateUserSettings = async (req, res) => {
 };
 
 // ============================================================
-// SUBSCRIPTIONS
+// SUBSCRIPTIONS - FIXED
 // ============================================================
 
 const PLAN_LIMITS = { basic: 3, pro: 9999, owner: 10, admin: 9999 };
 
-// Middleware: check if user can create more listings
 exports.checkListingLimit = async (req, res, next) => {
   try {
     const plan = req.user.plan || 'basic';
     const limit = PLAN_LIMITS[plan] ?? 3;
     if (limit === 9999) return next();
     const [[{ count }]] = await db.execute(
-      'SELECT COUNT(*) AS count FROM properties WHERE owner_id = ? AND status != "deleted"',
+      'SELECT COUNT(*) AS count FROM properties WHERE owner_id = ?',
       [req.user.id]
     );
     if (count >= limit) {
@@ -994,7 +966,7 @@ exports.getMySubscription = async (req, res) => {
     const plan = req.user.plan || 'basic';
     const limit = PLAN_LIMITS[plan] ?? 3;
     const [[{ used }]] = await db.execute(
-      'SELECT COUNT(*) AS used FROM properties WHERE owner_id = ? AND status != "deleted"',
+      'SELECT COUNT(*) AS used FROM properties WHERE owner_id = ?',
       [req.user.id]
     );
     res.json({ success: true, data: { subscription: sub || null, plan, limit, used } });
@@ -1102,7 +1074,7 @@ exports.getTermsOfService = async (req, res) => {
 };
 
 // ============================================================
-// VERIFICATION (DOCUMENT UPLOAD)
+// VERIFICATION
 // ============================================================
 
 exports.submitVerification = async (req, res) => {
@@ -1189,7 +1161,7 @@ exports.getVerificationStatus = async (req, res) => {
 };
 
 // ============================================================
-// ADMIN FUNCTIONS
+// ADMIN FUNCTIONS - FIXED (single quotes)
 // ============================================================
 
 exports.getAdminStats = async (req, res) => {
@@ -1197,7 +1169,8 @@ exports.getAdminStats = async (req, res) => {
     const [usersCount] = await db.execute('SELECT COUNT(*) as total FROM users WHERE deleted_at IS NULL');
     const [propsCount] = await db.execute('SELECT COUNT(*) as total FROM properties');
     const [activeProps] = await db.execute('SELECT COUNT(*) as total FROM properties WHERE status = "active"');
-    const [revenue] = await db.execute('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = "completed"');
+    // FIXED: Changed double quotes to single quotes
+    const [revenue] = await db.execute("SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'completed'");
     const [views] = await db.execute('SELECT COALESCE(SUM(views), 0) as total FROM properties');
     const [topProps] = await db.execute('SELECT id, title, area, city, views FROM properties ORDER BY views DESC LIMIT 6');
     
@@ -1494,10 +1467,9 @@ exports.updatePropertyAvailability = async (req, res) => {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
-// ANALYTICS FUNCTIONS (Added below getTermsOfService as instructed)
+// ANALYTICS FUNCTIONS
 // ═════════════════════════════════════════════════════════════════════════════
 
-// ── GET /admin/analytics/revenue ──────────────────────────────────────────────
 exports.getAnalyticsRevenue = async (req, res) => {
   try {
     const [data] = await db.execute(`
@@ -1527,7 +1499,6 @@ exports.getAnalyticsRevenue = async (req, res) => {
   }
 };
 
-// ── GET /admin/analytics/user-growth ──────────────────────────────────────────
 exports.getAnalyticsUserGrowth = async (req, res) => {
   try {
     const [data] = await db.execute(`
@@ -1551,7 +1522,6 @@ exports.getAnalyticsUserGrowth = async (req, res) => {
   }
 };
 
-// ── GET /admin/analytics/property-types ───────────────────────────────────────
 exports.getAnalyticsPropertyTypes = async (req, res) => {
   try {
     const [data] = await db.execute(`
@@ -1570,7 +1540,6 @@ exports.getAnalyticsPropertyTypes = async (req, res) => {
   }
 };
 
-// ── GET /admin/analytics/city-distribution ────────────────────────────────────
 exports.getAnalyticsCityDistribution = async (req, res) => {
   try {
     const [data] = await db.execute(`
