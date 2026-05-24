@@ -1,13 +1,15 @@
 const nodemailer = require('nodemailer');
 
-// Email configuration
+// ============================================================
+// BREVO SMTP CONFIGURATION (Updated from Gmail)
+// ============================================================
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: false,
+  host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
+  port: parseInt(process.env.BREVO_SMTP_PORT) || 587,
+  secure: false, // TLS
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.BREVO_SMTP_LOGIN,
+    pass: process.env.BREVO_API_KEY,
   },
 });
 
@@ -29,7 +31,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
   }
 };
 
-// Email templates
+// Email templates (unchanged - working perfectly)
 const templates = {
   // Welcome email
   welcome: (name) => ({
@@ -49,7 +51,7 @@ const templates = {
             <li>📅 Weka booking za mali</li>
           </ul>
           <p>Anza safari yako ya kutafuta makazi bora Tanzania!</p>
-          <a href="${process.env.CLIENT_URL}" style="background: #0d5c36; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Anza Sasa →</a>
+          <a href="${process.env.CLIENT_URL || 'https://makaziplus.vercel.app'}" style="background: #0d5c36; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Anza Sasa →</a>
         </div>
         <div style="text-align: center; padding: 10px; font-size: 12px; color: #7a8c82;">
           © 2025 MakaziPlus. Haki zote zimehifadhiwa.
@@ -77,7 +79,7 @@ const templates = {
           <p><strong>Simu:</strong> ${ownerPhone}</p>
           <hr />
           <p>Wasiliana na mwenye nyumba kwa maelezo zaidi.</p>
-          <a href="${process.env.CLIENT_URL}/chat" style="background: #0d5c36; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Wasiliana Sasa →</a>
+          <a href="${process.env.CLIENT_URL || 'https://makaziplus.vercel.app'}/chat" style="background: #0d5c36; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Wasiliana Sasa →</a>
         </div>
         <div style="text-align: center; padding: 10px; font-size: 12px; color: #7a8c82;">
           © 2025 MakaziPlus. Haki zote zimehifadhiwa.
@@ -106,7 +108,7 @@ const templates = {
           <p><strong>Simu:</strong> ${userPhone}</p>
           <hr />
           <p>Ingia kwenye dashboard yako kuthibitisha au kukataa ombi hili.</p>
-          <a href="${process.env.CLIENT_URL}/dashboard" style="background: #0d5c36; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Angalia Dashboard →</a>
+          <a href="${process.env.CLIENT_URL || 'https://makaziplus.vercel.app'}/dashboard" style="background: #0d5c36; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Angalia Dashboard →</a>
         </div>
         <div style="text-align: center; padding: 10px; font-size: 12px; color: #7a8c82;">
           © 2025 MakaziPlus. Haki zote zimehifadhiwa.
@@ -151,7 +153,7 @@ const templates = {
           <p>Uthibitisho wako umekubaliwa.</p>
           <p>Sasa una nembo ya "Verified" kwenye profaili yako.</p>
           <p>Wateja wanakuamini zaidi!</p>
-          <a href="${process.env.CLIENT_URL}/profile" style="background: #0d5c36; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Angalia Profaili →</a>
+          <a href="${process.env.CLIENT_URL || 'https://makaziplus.vercel.app'}/profile" style="background: #0d5c36; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Angalia Profaili →</a>
         </div>
         <div style="text-align: center; padding: 10px; font-size: 12px; color: #7a8c82;">
           © 2025 MakaziPlus. Haki zote zimehifadhiwa.
