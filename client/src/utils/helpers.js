@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// client/src/utils/helpers.js  — FULL REPLACEMENT
+// client/src/utils/helpers.js  — UPDATED with safer number handling
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Reads REACT_APP_API_URL from .env so it works on both localhost and production
@@ -76,10 +76,25 @@ export const getPropertyImage = (prop) => {
   return getPlaceholderImage(prop.type, prop.id);
 };
 
-// ── formatPrice ───────────────────────────────────────────────────────────────
+// ── formatPrice - FIXED: handles any input type safely ───────────────────────
 export const formatPrice = (n) => {
-  if (!n && n !== 0) return 'TSh 0';
-  const num = Number(n);
+  // Handle null, undefined, empty string
+  if (n === null || n === undefined || n === '') return 'TSh 0';
+  
+  // Convert to number safely
+  let num;
+  if (typeof n === 'string') {
+    // Remove any non-numeric characters except decimal point
+    const cleaned = n.replace(/[^0-9.-]/g, '');
+    num = parseFloat(cleaned);
+  } else {
+    num = Number(n);
+  }
+  
+  // Check if valid number
+  if (isNaN(num) || !isFinite(num)) return 'TSh 0';
+  
+  // Format based on size
   if (num >= 1_000_000_000) return `TSh ${(num / 1_000_000_000).toFixed(1)}B`;
   if (num >= 1_000_000)     return `TSh ${(num / 1_000_000).toFixed(1)}M`;
   if (num >= 1_000)         return `TSh ${(num / 1_000).toFixed(0)}K`;
@@ -174,11 +189,20 @@ export const STATUS_LABELS = {
 // ── renderStars ───────────────────────────────────────────────────────────────
 export const renderStars = (rating, size = 'sm') => {
   const sz = size === 'lg' ? 'text-2xl' : size === 'md' ? 'text-lg' : 'text-sm';
+  // Ensure rating is a number
+  const safeRating = typeof rating === 'number' ? rating : parseInt(rating) || 0;
   return (
     <span className="inline-flex gap-px">
       {[1, 2, 3, 4, 5].map(s => (
-        <span key={s} className={`${sz} leading-none ${s <= rating ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+        <span key={s} className={`${sz} leading-none ${s <= safeRating ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
       ))}
     </span>
   );
+};
+
+// ── safeNumber - helper to safely convert any value to number ─────────────────
+export const safeNumber = (value, defaultValue = 0) => {
+  if (value === null || value === undefined) return defaultValue;
+  const num = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  return isNaN(num) ? defaultValue : num;
 };
