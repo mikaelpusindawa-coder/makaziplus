@@ -189,7 +189,7 @@ exports.createProperty = async (req, res) => {
       `INSERT INTO properties
          (owner_id, title, description, type, price, price_type, city, area, address,
           bedrooms, bathrooms, size_sqm, status, latitude, longitude, place_id, formatted_address)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
       [
         req.user.id,
         String(title).trim().substring(0, 200),
