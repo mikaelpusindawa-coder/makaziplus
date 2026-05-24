@@ -1607,7 +1607,7 @@ exports.approveProperty = async (req, res) => {
     }
     
     const [property] = await db.execute(
-      'SELECT owner_id, title FROM properties WHERE id = ? AND status = "pending"',
+      "SELECT owner_id, title FROM properties WHERE id = ? AND status = 'pending'",
       [propId]
     );
     
@@ -1647,7 +1647,7 @@ exports.rejectProperty = async (req, res) => {
     }
     
     const [property] = await db.execute(
-      'SELECT owner_id, title FROM properties WHERE id = ? AND status = "pending"',
+      "SELECT owner_id, title FROM properties WHERE id = ? AND status = 'pending'",
       [propId]
     );
     
