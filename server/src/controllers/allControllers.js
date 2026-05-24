@@ -1161,7 +1161,7 @@ exports.getVerificationStatus = async (req, res) => {
 };
 
 // ============================================================
-// ADMIN FUNCTIONS - FIXED (single quotes)
+// ADMIN FUNCTIONS
 // ============================================================
 
 exports.getAdminStats = async (req, res) => {
@@ -1169,7 +1169,6 @@ exports.getAdminStats = async (req, res) => {
     const [usersCount] = await db.execute('SELECT COUNT(*) as total FROM users WHERE deleted_at IS NULL');
     const [propsCount] = await db.execute('SELECT COUNT(*) as total FROM properties');
     const [activeProps] = await db.execute('SELECT COUNT(*) as total FROM properties WHERE status = "active"');
-    // FIXED: Changed double quotes to single quotes
     const [revenue] = await db.execute("SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'completed'");
     const [views] = await db.execute('SELECT COALESCE(SUM(views), 0) as total FROM properties');
     const [topProps] = await db.execute('SELECT id, title, area, city, views FROM properties ORDER BY views DESC LIMIT 6');
@@ -1463,21 +1462,20 @@ exports.updatePropertyAvailability = async (req, res) => {
     console.error('updatePropertyAvailability error:', e.message);
     res.status(500).json({ success: false, message: 'Hitilafu ya seva' });
   }
-  
 };
 
-// ═════════════════════════════════════════════════════════════════════════════
+// ============================================================
 // ANALYTICS FUNCTIONS
-// ═════════════════════════════════════════════════════════════════════════════
+// ============================================================
 
 exports.getAnalyticsRevenue = async (req, res) => {
   try {
     const [data] = await db.execute(`
       SELECT
-        DATE_FORMAT(created_at, '%b')                                            AS month,
-        DATE_FORMAT(created_at, '%Y-%m')                                         AS month_key,
-        COALESCE(SUM(CASE WHEN status='completed' THEN amount ELSE 0 END), 0)   AS revenue,
-        COUNT(CASE WHEN status='completed' THEN 1 END)                           AS transactions
+        DATE_FORMAT(created_at, '%b') AS month,
+        DATE_FORMAT(created_at, '%Y-%m') AS month_key,
+        COALESCE(SUM(CASE WHEN status='completed' THEN amount ELSE 0 END), 0) AS revenue,
+        COUNT(CASE WHEN status='completed' THEN 1 END) AS transactions
       FROM payments
       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
       GROUP BY DATE_FORMAT(created_at, '%Y-%m'), DATE_FORMAT(created_at, '%b')
@@ -1487,8 +1485,8 @@ exports.getAnalyticsRevenue = async (req, res) => {
     const [[summary]] = await db.execute(`
       SELECT
         COALESCE(SUM(CASE WHEN status='completed' THEN amount ELSE 0 END), 0) AS total_revenue,
-        COALESCE(SUM(CASE WHEN status='pending'   THEN amount ELSE 0 END), 0) AS pending_revenue,
-        COUNT(CASE WHEN status='completed' THEN 1 END)                        AS completed_count
+        COALESCE(SUM(CASE WHEN status='pending' THEN amount ELSE 0 END), 0) AS pending_revenue,
+        COUNT(CASE WHEN status='completed' THEN 1 END) AS completed_count
       FROM payments
     `);
 
@@ -1503,11 +1501,11 @@ exports.getAnalyticsUserGrowth = async (req, res) => {
   try {
     const [data] = await db.execute(`
       SELECT
-        DATE_FORMAT(created_at, '%b')  AS month,
+        DATE_FORMAT(created_at, '%b') AS month,
         DATE_FORMAT(created_at, '%Y-%m') AS month_key,
-        COUNT(*)                         AS users,
-        COUNT(CASE WHEN role='agent'    THEN 1 END) AS agents,
-        COUNT(CASE WHEN role='owner'    THEN 1 END) AS owners,
+        COUNT(*) AS users,
+        COUNT(CASE WHEN role='agent' THEN 1 END) AS agents,
+        COUNT(CASE WHEN role='owner' THEN 1 END) AS owners,
         COUNT(CASE WHEN role='customer' THEN 1 END) AS customers
       FROM users
       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
@@ -1526,8 +1524,8 @@ exports.getAnalyticsPropertyTypes = async (req, res) => {
   try {
     const [data] = await db.execute(`
       SELECT
-        type                     AS name,
-        COUNT(*)                 AS value,
+        type AS name,
+        COUNT(*) AS value,
         COUNT(CASE WHEN status='active' THEN 1 END) AS active
       FROM properties
       GROUP BY type
@@ -1544,9 +1542,9 @@ exports.getAnalyticsCityDistribution = async (req, res) => {
   try {
     const [data] = await db.execute(`
       SELECT
-        city                     AS name,
-        COUNT(*)                 AS value,
-        COALESCE(SUM(views), 0)  AS total_views
+        city AS name,
+        COUNT(*) AS value,
+        COALESCE(SUM(views), 0) AS total_views
       FROM properties
       WHERE status = 'active'
       GROUP BY city
@@ -1558,7 +1556,9 @@ exports.getAnalyticsCityDistribution = async (req, res) => {
     console.error('getAnalyticsCityDistribution:', e.message);
     res.status(500).json({ success: false, message: 'Hitilafu ya seva' });
   }
-  // ============================================================
+};
+
+// ============================================================
 // PRODUCT MODERATION QUEUE (Pending Properties)
 // ============================================================
 
@@ -1590,6 +1590,7 @@ exports.getPendingProperties = async (req, res) => {
       properties[i].amenities = amenities.map(a => a.amenity);
     }
     
+    console.log(`📋 Found ${properties.length} pending properties`);
     res.json({ success: true, data: properties });
   } catch (error) {
     console.error('getPendingProperties error:', error.message);
@@ -1616,7 +1617,6 @@ exports.approveProperty = async (req, res) => {
     
     await db.execute('UPDATE properties SET status = "active" WHERE id = ?', [propId]);
     
-    // Notify the owner that their property was approved
     await db.execute(
       `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
        VALUES (?, 'Tangazo Limekubaliwa ✅', 'Tangazo lako "${property[0].title}" limekubaliwa na linapatikana kwa wateja wote.', 'system', ?, 'property', NOW())`,
@@ -1659,7 +1659,6 @@ exports.rejectProperty = async (req, res) => {
     
     const rejectReason = reason || 'Mali haikidhi vigezo vya platform yetu. Tafadhali kagua maelezo na jaribu tena.';
     
-    // Notify the owner that their property was rejected
     await db.execute(
       `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
        VALUES (?, 'Tangazo Limekataliwa ❌', 'Tangazo lako "${property[0].title}" limekataliwa. Sababu: ${rejectReason}', 'system', ?, 'property', NOW())`,
@@ -1724,5 +1723,4 @@ exports.getPendingPropertyDetails = async (req, res) => {
     console.error('getPendingPropertyDetails error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
-};
 };
