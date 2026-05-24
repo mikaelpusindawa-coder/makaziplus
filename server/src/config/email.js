@@ -1,37 +1,51 @@
-const nodemailer = require('nodemailer');
+// server/src/config/email.js
+const axios = require('axios');
 
 // ============================================================
-// BREVO SMTP CONFIGURATION (Updated from Gmail)
+// BREVO REST API CONFIGURATION (Works on Render Free Tier)
 // ============================================================
-const transporter = nodemailer.createTransport({
-  host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
-  port: parseInt(process.env.BREVO_SMTP_PORT) || 587,
-  secure: false, // TLS
-  auth: {
-    user: process.env.BREVO_SMTP_LOGIN,
-    pass: process.env.BREVO_API_KEY,
-  },
-});
 
-// Send email function
+// Send email using Brevo API (port 443 - allowed on Render free)
 const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    const info = await transporter.sendMail({
-      from: `"MakaziPlus" <${process.env.EMAIL_FROM || 'noreply@makaziplus.co.tz'}>`,
-      to,
-      subject,
-      html,
-      text,
-    });
-    console.log(`📧 Email sent to ${to}: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
+    const apiKey = process.env.BREVO_API_KEY;
+    
+    if (!apiKey) {
+      console.error('❌ BREVO_API_KEY not set in environment variables');
+      return { success: false, error: 'API key missing' };
+    }
+
+    const response = await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: {
+          name: 'MakaziPlus',
+          email: process.env.BREVO_SENDER_EMAIL || 'noreply@makaziplus.co.tz'
+        },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html,
+        textContent: text || html.replace(/<[^>]*>/g, ''),
+      },
+      {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'api-key': apiKey,
+        },
+        timeout: 30000, // 30 seconds timeout
+      }
+    );
+
+    console.log(`📧 Email sent to ${to}: ${response.data.messageId}`);
+    return { success: true, messageId: response.data.messageId };
   } catch (error) {
-    console.error('Email error:', error.message);
-    return { success: false, error: error.message };
+    console.error('Email error:', error.response?.data?.message || error.message);
+    return { success: false, error: error.response?.data?.message || error.message };
   }
 };
 
-// Email templates (unchanged - working perfectly)
+// Email templates (unchanged - keep all your existing templates below)
 const templates = {
   // Welcome email
   welcome: (name) => ({
