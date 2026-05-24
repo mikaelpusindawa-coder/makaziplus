@@ -230,7 +230,7 @@ const HeroSlider = ({ properties, loading }) => {
   );
 };
 
-// Recent Properties Marquee
+// Recent Properties Marquee - FIXED price formatting
 const RecentMarquee = ({ items }) => {
   const navigate = useNavigate();
   if (!items.length) return null;
@@ -259,7 +259,7 @@ const RecentMarquee = ({ items }) => {
             </div>
             <div className="p-2.5">
               <p className="text-xs font-bold text-primary line-clamp-1">
-                {p.price_type === 'rent' ? `TSh ${Math.round(p.price / 1000)}K/mwezi` : `TSh ${Math.round(p.price / 1000000).toFixed(1)}M`}
+                {formatPrice(p.price)} {p.price_type === 'rent' ? '/mwezi' : ''}
               </p>
               <p className="text-2xs text-ink-4 mt-0.5 line-clamp-1">{p.area}, {p.city}</p>
             </div>
@@ -289,6 +289,7 @@ export default function Home() {
   const [loadingF, setLoadingF] = useState(true);
   const [loadingN, setLoadingN] = useState(true);
   const [loadingHero, setLoadingHero] = useState(true);
+  
   const buildParams = useCallback(() => {
     const p = {};
     if (filter === 'nyumba') p.type = 'nyumba';
@@ -329,7 +330,6 @@ export default function Home() {
   const fetchHeroProperties = useCallback(async () => {
     setLoadingHero(true);
     try {
-      // Fetch up to 20 so we can filter to those with real uploaded images
       const r = await api.get('/properties', { params: { limit: 20 } });
       setHeroProperties(r.data.data || []);
     } catch (err) {
@@ -360,10 +360,8 @@ export default function Home() {
     } catch { toast('Hitilafu ya mtandao', 'error'); }
   };
 
-  // Only properties with real uploaded images
   const heroWithImages = heroProperties.filter(p => Array.isArray(p.images) && p.images.length > 0);
   const newestWithImages = newest.filter(p => Array.isArray(p.images) && p.images.length > 0);
-  // Marquee: prefer real images; fall back to all only when none have real images
   const marqueeItems = newestWithImages.length > 0 ? newestWithImages : newest;
 
   return (
@@ -371,7 +369,6 @@ export default function Home() {
       <TopBar />
       <HeroSlider properties={heroWithImages} loading={loadingHero} />
 
-      {/* Stats Section */}
       <div className="flex justify-around px-4 py-4 md:max-w-2xl md:mx-auto">
         {STATS.map(s => (
           <div key={s.label} className="text-center">
@@ -381,7 +378,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Filter Chips */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto">
         {FILTERS.map(f => (
           <button
@@ -395,7 +391,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Featured Properties */}
       {featured.length > 0 && (
         <div className="mt-4 md:max-w-4xl md:mx-auto">
           <div className="flex items-center justify-between px-4 mb-3">
@@ -420,7 +415,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Newest Properties Marquee */}
       {marqueeItems.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between px-4 mb-2.5">
@@ -435,7 +429,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* All Properties */}
       <div className="mt-5 md:max-w-4xl md:mx-auto">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
@@ -461,7 +454,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* CTA for non-logged in users */}
       {!user && (
         <div className="mx-4 mt-6 mb-4 bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
           <h3 className="font-serif text-xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
