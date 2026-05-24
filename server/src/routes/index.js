@@ -140,6 +140,12 @@ router.get('/admin/analytics/user-growth',      protect, authorize('admin'), ctr
 router.get('/admin/analytics/property-types',   protect, authorize('admin'), ctrl.getAnalyticsPropertyTypes);
 router.get('/admin/analytics/city-distribution',protect, authorize('admin'), ctrl.getAnalyticsCityDistribution);
 
+// ── PRODUCT MODERATION QUEUE (Pending Properties) ────────────────────────────
+router.get('/admin/properties/pending',             protect, authorize('admin'), ctrl.getPendingProperties);
+router.get('/admin/properties/pending/:id',         protect, authorize('admin'), ctrl.getPendingPropertyDetails);
+router.post('/admin/properties/:id/approve',        protect, authorize('admin'), ctrl.approveProperty);
+router.post('/admin/properties/:id/reject',         protect, authorize('admin'), ctrl.rejectProperty);
+
 // ── HEALTH ────────────────────────────────────────────────────────────────────
 router.get('/health', (req, res) => res.json({ status: 'ok', time: new Date(), uptime: process.uptime() }));
 
