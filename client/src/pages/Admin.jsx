@@ -12,7 +12,8 @@ import {
 } from 'recharts';
 import api from '../utils/api';
 
-const TABS = ['Overview', 'Users', 'Listings', 'Payments', 'Verifications', 'Security', 'Analytics'];
+// Add "Pending" to TABS
+const TABS = ['Overview', 'Users', 'Listings', 'Payments', 'Verifications', 'Security', 'Analytics', 'Pending'];
 
 const Badge = ({ children, color = 'green' }) => {
   const colors = {
@@ -53,7 +54,146 @@ const BarRow = ({ label, count, max }) => (
   </div>
 );
 
-// ── Verification helpers ──────────────────────────────────────────────────────
+// Pending Property Card Component
+const PendingPropertyCard = ({ property, onApprove, onReject }) => {
+  const [showDetails, setShowDetails] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const handleApprove = async () => {
+    if (!window.confirm(`Kubali tangazo "${property.title}"?`)) return;
+    setActionLoading(true);
+    try {
+      await onApprove(property.id);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) { alert('Weka sababu ya kukataa'); return; }
+    setActionLoading(true);
+    try {
+      await onReject(property.id, rejectReason);
+      setShowRejectModal(false);
+      setRejectReason('');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-surface-4 shadow-soft mb-4 overflow-hidden">
+      <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-100 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-3 flex-shrink-0">
+            <img 
+              src={property.images?.[0]?.image_url || getPropertyImage(property)} 
+              alt={property.title}
+              className="w-full h-full object-cover"
+              onError={(e) => { e.target.src = 'https://placehold.co/400x300?text=No+Image'; }}
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-bold text-ink">{property.title}</span>
+              <Badge color="gold">⏳ Pending</Badge>
+            </div>
+            <div className="text-2xs text-ink-5">{property.area}, {property.city} · By {property.owner_name}</div>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowDetails(!showDetails)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700">
+            {showDetails ? 'Hide Details' : '🔍 Inspect'}
+          </button>
+          <button onClick={handleApprove} disabled={actionLoading} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 disabled:opacity-50">
+            ✅ Approve
+          </button>
+          <button onClick={() => setShowRejectModal(true)} disabled={actionLoading} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50">
+            ❌ Reject
+          </button>
+        </div>
+      </div>
+
+      {showDetails && (
+        <div className="p-4 space-y-3 border-t border-surface-4">
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div><span className="text-ink-5">Bei:</span> <span className="font-semibold">{formatPrice(property.price)}</span></div>
+            <div><span className="text-ink-5">Aina:</span> <span className="font-semibold capitalize">{property.type}</span></div>
+            <div><span className="text-ink-5">Vyumba:</span> <span className="font-semibold">{property.bedrooms}</span></div>
+            <div><span className="text-ink-5">Bafu:</span> <span className="font-semibold">{property.bathrooms}</span></div>
+            <div><span className="text-ink-5">Ukubwa:</span> <span className="font-semibold">{property.size_sqm} m²</span></div>
+            <div><span className="text-ink-5">Imechapishwa:</span> <span className="font-semibold">{formatDate(property.created_at)}</span></div>
+          </div>
+          
+          <div>
+            <p className="text-2xs font-bold text-ink-4 uppercase mb-1">Maelezo</p>
+            <p className="text-sm text-ink-4">{property.description}</p>
+          </div>
+
+          {property.amenities?.length > 0 && (
+            <div>
+              <p className="text-2xs font-bold text-ink-4 uppercase mb-1">Huduma</p>
+              <div className="flex flex-wrap gap-1">
+                {property.amenities.map(a => (
+                  <span key={a} className="badge badge-primary text-2xs">{a}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {property.images?.length > 0 && (
+            <div>
+              <p className="text-2xs font-bold text-ink-4 uppercase mb-1">Picha ({property.images.length})</p>
+              <div className="flex gap-2 overflow-x-auto">
+                {property.images.map((img, i) => (
+                  <img key={i} src={img.image_url} alt="" className="w-20 h-20 object-cover rounded-lg border" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {property.video_url && (
+            <div>
+              <p className="text-2xs font-bold text-ink-4 uppercase mb-1">Video</p>
+              <video src={property.video_url} controls className="w-full max-h-48 rounded-lg" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+          onClick={(e) => e.target === e.currentTarget && setShowRejectModal(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl">
+            <h3 className="font-bold text-ink text-base mb-1">Kataa Tangazo</h3>
+            <p className="text-sm text-ink-5 mb-3">Sababu ya kukataa:</p>
+            <textarea 
+              value={rejectReason} 
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Andika sababu ya kukataa tangazo hili..."
+              rows={3} 
+              className="input-field mb-4 text-sm" 
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setShowRejectModal(false)} className="flex-1 py-2.5 border border-surface-4 rounded-xl text-sm font-medium hover:bg-surface-2">
+                Ghairi
+              </button>
+              <button onClick={handleReject} disabled={actionLoading || !rejectReason.trim()} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-50">
+                {actionLoading ? 'Inafanya...' : 'Kataa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Verification helpers (keep as is) ──────────────────────────────────────
 const validateNida = (num) => {
   const d = (num || '').replace(/\D/g, '');
   const formatted = d.length === 20
@@ -157,8 +297,6 @@ const VerificationCard = ({ request, onApprove, onReject }) => {
 
   return (
     <div className="bg-white rounded-2xl border border-surface-4 shadow-soft mb-4 overflow-hidden">
-
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className={`px-4 py-3 flex items-center justify-between flex-wrap gap-3 border-b
         ${request.status === 'pending' ? 'bg-yellow-50 border-yellow-100' :
           request.status === 'approved' ? 'bg-green-50 border-green-100' :
@@ -206,8 +344,6 @@ const VerificationCard = ({ request, onApprove, onReject }) => {
       </div>
 
       <div className="p-4 space-y-4">
-
-        {/* ── Validation Checks ────────────────────────────────────────────── */}
         <div>
           <p className="text-2xs font-bold text-ink-4 uppercase tracking-widest mb-2">🔍 Ukaguzi wa Taarifa</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -223,7 +359,6 @@ const VerificationCard = ({ request, onApprove, onReject }) => {
           </div>
         </div>
 
-        {/* ── NIDA detail bar ──────────────────────────────────────────────── */}
         {nida && (
           <div className={`rounded-xl px-4 py-2.5 flex items-center gap-3 ${nida.valid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
             <span className="text-lg">{nida.valid ? '✅' : '❌'}</span>
@@ -239,7 +374,6 @@ const VerificationCard = ({ request, onApprove, onReject }) => {
           </div>
         )}
 
-        {/* ── Documents (always visible) ───────────────────────────────────── */}
         <div>
           <p className="text-2xs font-bold text-ink-4 uppercase tracking-widest mb-2">
             📄 Nyaraka za Utambulisho
@@ -252,7 +386,6 @@ const VerificationCard = ({ request, onApprove, onReject }) => {
           </div>
         </div>
 
-        {/* ── Rejection notes ──────────────────────────────────────────────── */}
         {request.admin_notes && (
           <div className="p-3 bg-red-50 rounded-xl border border-red-100">
             <p className="text-2xs font-bold text-red-600 uppercase tracking-wide mb-1">Sababu ya Kukataliwa</p>
@@ -261,7 +394,6 @@ const VerificationCard = ({ request, onApprove, onReject }) => {
         )}
       </div>
 
-      {/* ── Reject Modal ─────────────────────────────────────────────────────── */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
@@ -312,6 +444,7 @@ export default function Admin() {
   const [stats, setStats] = useState(null);
   const [security, setSecurity] = useState(null);
   const [verifications, setVerifications] = useState([]);
+  const [pendingProperties, setPendingProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [blockIp, setBlockIp] = useState('');
   const [blockReason, setBlockReason] = useState('');
@@ -328,53 +461,29 @@ export default function Admin() {
 
   const fetchAnalytics = useCallback(async () => {
     try {
-      // Fetch revenue by month
       const revenueRes = await api.get('/admin/analytics/revenue');
       setRevenueData(revenueRes.data.data || []);
-
-      // Fetch user growth
       const userGrowthRes = await api.get('/admin/analytics/user-growth');
       setUserGrowthData(userGrowthRes.data.data || []);
-
-      // Fetch property type distribution
       const typeRes = await api.get('/admin/analytics/property-types');
       setPropertyTypeData(typeRes.data.data || []);
-
-      // Fetch city distribution
       const cityRes = await api.get('/admin/analytics/city-distribution');
       setCityData(cityRes.data.data || []);
     } catch (err) {
       console.error('Analytics fetch error:', err);
-      // Generate sample data if API fails
-      setRevenueData([
-        { month: 'Jan', revenue: 0 },
-        { month: 'Feb', revenue: 0 },
-        { month: 'Mar', revenue: 0 },
-        { month: 'Apr', revenue: 0 },
-        { month: 'Mei', revenue: 0 },
-        { month: 'Jun', revenue: 0 },
-      ]);
-      setUserGrowthData([
-        { month: 'Jan', users: 0 },
-        { month: 'Feb', users: 0 },
-        { month: 'Mar', users: 0 },
-        { month: 'Apr', users: 0 },
-        { month: 'Mei', users: 0 },
-        { month: 'Jun', users: 0 },
-      ]);
-      setPropertyTypeData([
-        { name: 'Nyumba', value: 0 },
-        { name: 'Chumba', value: 0 },
-        { name: 'Frem', value: 0 },
-        { name: 'Ofisi', value: 0 },
-      ]);
-      setCityData([
-        { name: 'Dar es Salaam', value: 0 },
-        { name: 'Mwanza', value: 0 },
-        { name: 'Arusha', value: 0 },
-        { name: 'Dodoma', value: 0 },
-        { name: 'Mbeya', value: 0 },
-      ]);
+      setRevenueData([{ month: 'Jan', revenue: 0 }, { month: 'Feb', revenue: 0 }, { month: 'Mar', revenue: 0 }, { month: 'Apr', revenue: 0 }, { month: 'Mei', revenue: 0 }, { month: 'Jun', revenue: 0 }]);
+      setUserGrowthData([{ month: 'Jan', users: 0 }, { month: 'Feb', users: 0 }, { month: 'Mar', users: 0 }, { month: 'Apr', users: 0 }, { month: 'Mei', users: 0 }, { month: 'Jun', users: 0 }]);
+      setPropertyTypeData([{ name: 'Nyumba', value: 0 }, { name: 'Chumba', value: 0 }, { name: 'Frem', value: 0 }, { name: 'Ofisi', value: 0 }]);
+      setCityData([{ name: 'Dar es Salaam', value: 0 }, { name: 'Mwanza', value: 0 }, { name: 'Arusha', value: 0 }, { name: 'Dodoma', value: 0 }, { name: 'Mbeya', value: 0 }]);
+    }
+  }, []);
+
+  const fetchPendingProperties = useCallback(async () => {
+    try {
+      const res = await api.get('/admin/properties/pending');
+      setPendingProperties(res.data.data || []);
+    } catch (err) {
+      console.error('Fetch pending properties error:', err);
     }
   }, []);
 
@@ -396,13 +505,14 @@ export default function Admin() {
       setStats(s.data.data);
       setSecurity(sec.data.data);
       setVerifications(ver.data.data || []);
+      await fetchPendingProperties();
     } catch (err) {
       console.error('Fetch error:', err);
       toast('Hitilafu ya kupakia data', 'error');
     } finally {
       setLoading(false);
     }
-  }, [user, toast]);
+  }, [user, toast, fetchPendingProperties]);
 
   useEffect(() => {
     fetchAll();
@@ -438,7 +548,30 @@ export default function Admin() {
       await api.patch(`/admin/properties/${pid}`, { status });
       setProps(prev => prev.map(p => p.id === pid ? { ...p, status } : p));
       toast('Hali imebadilishwa ✓', 'success');
+      fetchPendingProperties();
     } catch { toast('Hitilafu', 'error'); }
+  };
+
+  const approveProperty = async (propId) => {
+    try {
+      await api.post(`/admin/properties/${propId}/approve`);
+      toast('Tangazo limekubaliwa! ✅', 'success');
+      fetchPendingProperties();
+      fetchAll();
+    } catch (err) {
+      toast(err.response?.data?.message || 'Hitilafu', 'error');
+    }
+  };
+
+  const rejectProperty = async (propId, reason) => {
+    try {
+      await api.post(`/admin/properties/${propId}/reject`, { reason });
+      toast('Tangazo limekataliwa ❌', 'success');
+      fetchPendingProperties();
+      fetchAll();
+    } catch (err) {
+      toast(err.response?.data?.message || 'Hitilafu', 'error');
+    }
   };
 
   const handleApproveVerification = async (userId) => {
@@ -488,6 +621,7 @@ export default function Admin() {
 
   const totalRevenue = payments.filter(p => p.status === 'completed').reduce((s, p) => s + parseFloat(p.amount || 0), 0);
   const pendingVerifications = verifications.filter(v => v.status === 'pending').length;
+  const pendingCount = pendingProperties.length;
 
   const COLORS = ['#0d5c36', '#52b47d', '#c8933a', '#2563eb', '#dc2626', '#7a8c82'];
 
@@ -495,12 +629,10 @@ export default function Admin() {
     <div className="min-h-screen bg-surface pb-24 md:pb-8">
       <TopBar title="🛡️ Admin Panel" showBack />
 
-      {/* Hero */}
       <div className="bg-gradient-to-br from-ink to-primary/90 px-4 py-5 relative overflow-hidden">
         <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/5 rounded-full" />
         <div className="font-serif text-xl font-semibold text-white">Admin Panel</div>
         <div className="text-xs text-white/40 mt-0.5">MakaziPlus v4.0 --- Simamia mfumo wote</div>
-
         {stats && (
           <div className="flex gap-4 mt-3">
             {[
@@ -508,6 +640,7 @@ export default function Admin() {
               ['🏠', stats.properties, 'Mali'],
               ['💰', formatPrice(stats.revenue || 0), 'Mapato'],
               ['📋', pendingVerifications, 'Yanasubiri'],
+              ['⏳', pendingCount, 'Pending Props'],
             ].map(([icon, val, lbl]) => (
               <div key={lbl} className="text-center">
                 <div className="text-white font-bold text-sm">{icon} {typeof val === 'number' ? val.toLocaleString() : val}</div>
@@ -518,18 +651,20 @@ export default function Admin() {
         )}
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-3 py-3">
         {TABS.map((t, i) => (
           <button
             key={t}
             onClick={() => setTab(i)}
             className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all
-              ${tab === i ? (t === 'Security' ? 'bg-red-600 text-white' : 'bg-primary text-white') : 'bg-white text-ink-3'}`}
+              ${tab === i ? (t === 'Security' ? 'bg-red-600 text-white' : t === 'Pending' ? 'bg-orange-600 text-white' : 'bg-primary text-white') : 'bg-white text-ink-3'}`}
           >
-            {t === 'Security' ? '🔒 ' : ''}{t}
+            {t === 'Security' ? '🔒 ' : t === 'Pending' ? '⏳ ' : ''}{t}
             {t === 'Verifications' && pendingVerifications > 0 && (
               <span className="ml-1.5 px-1.5 py-0.5 bg-red-500 text-white rounded-full text-2xs">{pendingVerifications}</span>
+            )}
+            {t === 'Pending' && pendingCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 bg-orange-500 text-white rounded-full text-2xs">{pendingCount}</span>
             )}
           </button>
         ))}
@@ -539,7 +674,7 @@ export default function Admin() {
         <div className="flex justify-center py-16"><Spinner size="lg" /></div>
       ) : (
         <div className="px-3">
-          {/* TAB 0: OVERVIEW */}
+          {/* TAB 0: OVERVIEW - keep as is */}
           {tab === 0 && stats && (
             <>
               <div className="grid grid-cols-2 gap-2.5 mb-3">
@@ -548,14 +683,12 @@ export default function Admin() {
                 <StatCard icon="👁️" label="Maoni Yote" value={(stats.views || 0).toLocaleString()} sub="jumla views" />
                 <StatCard icon="💰" label="Mapato" value={formatPrice(stats.revenue || 0)} sub="malipo yote" />
               </div>
-
               {stats.pending_payments > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 mb-3 flex items-center gap-2">
                   <span className="text-lg">⏳</span>
                   <div className="text-xs text-amber-800 font-medium">Malipo {stats.pending_payments} yanasubiri uthibitisho</div>
                 </div>
               )}
-
               <div className="bg-white rounded-2xl p-4 shadow-sm mb-3">
                 <div className="text-sm font-bold text-ink mb-4">🔥 Mali Zinazoongoza (Views)</div>
                 {stats.top_properties?.length ?
@@ -563,7 +696,6 @@ export default function Admin() {
                     <BarRow key={p.id} label={`${i + 1}. ${p.area} --- ${p.title?.substring(0, 25)}...`} count={p.views} max={stats.top_properties[0]?.views || 1} />
                   )) : <div className="text-xs text-ink-4">Hakuna data</div>}
               </div>
-
               <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <div className="text-sm font-bold text-ink mb-4">📍 Maeneo Maarufu</div>
                 {[
@@ -577,7 +709,7 @@ export default function Admin() {
             </>
           )}
 
-          {/* TAB 1: USERS */}
+          {/* TAB 1: USERS - keep as is */}
           {tab === 1 && (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-black/5 flex justify-between items-center">
@@ -624,7 +756,7 @@ export default function Admin() {
             </div>
           )}
 
-          {/* TAB 2: LISTINGS */}
+          {/* TAB 2: LISTINGS - keep as is */}
           {tab === 2 && (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-black/5">
@@ -661,7 +793,7 @@ export default function Admin() {
             </div>
           )}
 
-          {/* TAB 3: PAYMENTS */}
+          {/* TAB 3: PAYMENTS - keep as is */}
           {tab === 3 && (
             <>
               <div className="bg-gradient-to-br from-ink to-primary rounded-2xl p-5 mb-3 shadow-sm relative overflow-hidden">
@@ -696,7 +828,7 @@ export default function Admin() {
             </>
           )}
 
-          {/* TAB 4: VERIFICATIONS */}
+          {/* TAB 4: VERIFICATIONS - keep as is */}
           {tab === 4 && (
             <>
               <div className="grid grid-cols-2 gap-2.5 mb-3">
@@ -725,7 +857,7 @@ export default function Admin() {
             </>
           )}
 
-          {/* TAB 5: SECURITY */}
+          {/* TAB 5: SECURITY - keep as is */}
           {tab === 5 && (
             <>
               <div className="grid grid-cols-3 gap-2 mb-3">
@@ -787,10 +919,9 @@ export default function Admin() {
             </>
           )}
 
-          {/* TAB 6: ANALYTICS - NEW WITH CHARTS */}
+          {/* TAB 6: ANALYTICS - keep as is */}
           {tab === 6 && (
             <div className="space-y-4">
-              {/* Revenue Chart */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-surface-4">
                 <h3 className="text-sm font-bold text-ink mb-4">📈 Mapato kwa Mwezi (TZS)</h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -804,8 +935,6 @@ export default function Admin() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-
-              {/* User Growth Chart */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-surface-4">
                 <h3 className="text-sm font-bold text-ink mb-4">👥 Ukuaji wa Watumiaji</h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -819,33 +948,18 @@ export default function Admin() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-
-              {/* Property Type Distribution - Pie Chart */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-surface-4">
                 <h3 className="text-sm font-bold text-ink mb-4">🏠 Usambazaji wa Aina za Mali</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie
-                      data={propertyTypeData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {propertyTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
+                    <Pie data={propertyTypeData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
+                      {propertyTypeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                     </Pie>
                     <Tooltip />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-
-              {/* City Distribution - Bar Chart */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-surface-4">
                 <h3 className="text-sm font-bold text-ink mb-4">📍 Usambazaji wa Mali kwa Miji</h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -859,8 +973,6 @@ export default function Admin() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-
-              {/* Quick Stats Summary */}
               <div className="grid grid-cols-2 gap-2.5">
                 <StatCard icon="🏠" label="Jumla ya Mali" value={props.length} sub="zilizoorodheshwa" />
                 <StatCard icon="👥" label="Jumla ya Watumiaji" value={users.length} sub="waliojiunga" />
@@ -868,6 +980,28 @@ export default function Admin() {
                 <StatCard icon="⭐" label="Wastani wa Rating" value={(users.reduce((s, u) => s + (u.rating || 0), 0) / (users.length || 1)).toFixed(1)} sub="kati ya 5" />
               </div>
             </div>
+          )}
+
+          {/* TAB 7: PENDING PROPERTIES - NEW */}
+          {tab === 7 && (
+            <>
+              <div className="grid grid-cols-2 gap-2.5 mb-3">
+                <StatCard icon="⏳" label="Zinazosubiri" value={pendingCount} sub="Matangazo yanayohitaji ukaguzi" />
+                <StatCard icon="🏠" label="Jumla ya Mali" value={props.length} sub="zilizoorodheshwa" />
+              </div>
+              {pendingCount === 0 ? (
+                <EmptyState icon="✅" title="Hakuna matangazo yanayosubiri" subtitle="Matangazo yote yamekaguliwa" />
+              ) : (
+                pendingProperties.map(property => (
+                  <PendingPropertyCard
+                    key={property.id}
+                    property={property}
+                    onApprove={approveProperty}
+                    onReject={rejectProperty}
+                  />
+                ))
+              )}
+            </>
           )}
         </div>
       )}
