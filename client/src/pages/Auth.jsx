@@ -94,7 +94,7 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Left panel — decorative gradient (desktop) */}
+      {/* Left panel — decorative gradient (desktop only) */}
       <div className="hidden md:flex md:w-5/12 lg:w-3/5 relative overflow-hidden flex-shrink-0">
         <div className="w-full h-full" style={{ background: BG_GRADIENTS[bgIdx] }} />
         <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/30" />
@@ -120,63 +120,64 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Right panel — form with improved mobile scrolling */}
+      {/* Right panel — form with improved visibility */}
       <div className="flex-1 flex flex-col relative overflow-y-auto">
-        {/* Mobile background */}
-        <div className="md:hidden fixed inset-0 z-0">
+        {/* Mobile background - hidden behind content */}
+        <div className="fixed inset-0 z-0 md:hidden">
           <div className="w-full h-full" style={{ background: BG_GRADIENTS[bgIdx] }} />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/60" />
         </div>
 
-        {/* Scrollable content area */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center py-8 px-4 md:py-12 md:px-10 lg:px-16">
+        {/* Scrollable content area with solid card background */}
+        <div className="relative z-10 flex-1 flex flex-col justify-center py-6 px-4 md:py-12 md:px-10 lg:px-16">
+          
           {/* Mobile logo */}
-          <div className="md:hidden text-center mb-6">
-            <div className="font-serif text-3xl font-semibold text-white">
+          <div className="md:hidden text-center mb-5">
+            <div className="font-serif text-3xl font-semibold text-white drop-shadow-lg">
               Makazi<span className="text-gold-200">Plus</span>
             </div>
-            <p className="text-white/60 text-xs mt-1">Tanzania's Property Platform</p>
+            <p className="text-white/70 text-xs mt-1">Tanzania's Property Platform</p>
           </div>
 
-          {/* Form Card */}
-          <div className="bg-white/98 md:bg-white backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-xl w-full max-w-md mx-auto">
+          {/* Form Card - Solid white background for better readability */}
+          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl w-full max-w-md mx-auto">
             {mode === 'login' ? (
               /* ── LOGIN ── */
               <>
                 <div className="mb-6 text-center md:text-left">
-                  <h1 className="font-serif text-2xl md:text-3xl font-semibold text-ink">Karibu Tena 👋</h1>
-                  <p className="text-sm text-ink-5 mt-1">Ingia kwenye akaunti yako</p>
+                  <h1 className="font-serif text-2xl md:text-3xl font-semibold text-gray-900">Karibu Tena 👋</h1>
+                  <p className="text-sm text-gray-500 mt-1">Ingia kwenye akaunti yako</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
                       Barua Pepe au Simu
                     </label>
                     <input
                       value={form.email}
                       onChange={e => set('email', e.target.value)}
-                      className="input-field w-full"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all"
                       placeholder="barua@email.com au +255..."
                       autoComplete="email"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-2">Nywila</label>
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Nywila</label>
                     <div className="relative">
                       <input
                         value={form.password}
                         onChange={e => set('password', e.target.value)}
                         type={showPass ? 'text' : 'password'}
-                        className="input-field w-full pr-12"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all pr-12"
                         placeholder="••••••••"
                         autoComplete="current-password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPass(p => !p)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-5 hover:text-ink text-sm"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary text-sm"
                       >
                         {showPass ? '🙈' : '👁'}
                       </button>
@@ -204,7 +205,7 @@ export default function Auth() {
                   </button>
                 </form>
 
-                <p className="text-center text-sm text-ink-5 mt-6">
+                <p className="text-center text-sm text-gray-500 mt-6">
                   Huna akaunti?{' '}
                   <button onClick={() => setMode('register')} className="text-primary font-bold hover:underline">
                     Jisajili hapa
@@ -215,8 +216,8 @@ export default function Auth() {
               /* ── REGISTER ── */
               <>
                 <div className="mb-5 text-center md:text-left">
-                  <h1 className="font-serif text-2xl md:text-3xl font-semibold text-ink">Anza Safari 🚀</h1>
-                  <p className="text-sm text-ink-5 mt-1">Unda akaunti yako mpya bure</p>
+                  <h1 className="font-serif text-2xl md:text-3xl font-semibold text-gray-900">Anza Safari 🚀</h1>
+                  <p className="text-sm text-gray-500 mt-1">Unda akaunti yako mpya bure</p>
                 </div>
 
                 {/* Role picker */}
@@ -228,15 +229,17 @@ export default function Auth() {
                       onClick={() => setRole(r.id)}
                       className={`flex flex-col items-center gap-1 py-3 rounded-2xl border-2 text-center transition-all active:scale-95
                         ${role === r.id
-                          ? 'border-primary bg-primary-50 scale-[1.02]'
-                          : 'border-surface-4 hover:border-primary/30 bg-white'
+                          ? 'border-primary bg-primary-50 text-primary'
+                          : 'border-gray-200 hover:border-primary/30 bg-white text-gray-600'
                         }`}
                     >
                       <span className="text-xl">{r.icon}</span>
-                      <span className={`text-[11px] font-bold ${role === r.id ? 'text-primary' : 'text-ink-4'}`}>
+                      <span className={`text-[11px] font-bold ${role === r.id ? 'text-primary' : 'text-gray-600'}`}>
                         {r.label}
                       </span>
-                      <span className="text-[9px] text-ink-5">{r.desc}</span>
+                      <span className={`text-[9px] ${role === r.id ? 'text-primary/70' : 'text-gray-400'}`}>
+                        {r.desc}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -244,7 +247,7 @@ export default function Auth() {
                 <form onSubmit={handleRegister} className="space-y-3.5">
                   {/* Name */}
                   <div>
-                    <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
                       Jina Kamili *
                     </label>
                     <input
@@ -252,13 +255,13 @@ export default function Auth() {
                       onChange={e => set('name', e.target.value)}
                       type="text"
                       placeholder="Jina lako kamili"
-                      className="input-field w-full"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all"
                     />
                   </div>
 
                   {/* Phone */}
                   <div>
-                    <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
                       Nambari ya Simu *
                     </label>
                     <input
@@ -266,13 +269,13 @@ export default function Auth() {
                       onChange={e => set('phone', e.target.value)}
                       type="tel"
                       placeholder="+255 7XX XXX XXX"
-                      className="input-field w-full"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all"
                     />
                   </div>
 
                   {/* Email */}
                   <div>
-                    <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
                       Barua Pepe *
                     </label>
                     <input
@@ -280,13 +283,13 @@ export default function Auth() {
                       onChange={e => set('email', e.target.value)}
                       type="email"
                       placeholder="barua@email.com"
-                      className="input-field w-full"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all"
                     />
                   </div>
 
                   {/* Gender (optional) */}
                   <div>
-                    <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
                       Jinsia (hiari)
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -298,7 +301,7 @@ export default function Auth() {
                           className={`py-2 rounded-xl border-2 text-xs font-semibold transition-all active:scale-95
                             ${gender === g.v
                               ? 'border-primary bg-primary-50 text-primary'
-                              : 'border-surface-4 text-ink-4 bg-white'
+                              : 'border-gray-200 text-gray-600 bg-white hover:border-primary/30'
                             }`}
                         >
                           {g.l}
@@ -309,7 +312,7 @@ export default function Auth() {
 
                   {/* Password */}
                   <div>
-                    <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
                       Nywila *
                     </label>
                     <div className="relative">
@@ -318,12 +321,12 @@ export default function Auth() {
                         onChange={e => set('password', e.target.value)}
                         type={showPass ? 'text' : 'password'}
                         placeholder="Angalau herufi 8"
-                        className="input-field w-full pr-12"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all pr-12"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPass(p => !p)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-5 text-sm"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"
                       >
                         {showPass ? '🙈' : '👁'}
                       </button>
@@ -332,7 +335,7 @@ export default function Auth() {
 
                   {/* Confirm Password */}
                   <div>
-                    <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
                       Thibitisha Nywila *
                     </label>
                     <input
@@ -340,7 +343,7 @@ export default function Auth() {
                       onChange={e => set('confirmPassword', e.target.value)}
                       type="password"
                       placeholder="Rudia nywila"
-                      className="input-field w-full"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all"
                     />
                   </div>
 
@@ -355,7 +358,7 @@ export default function Auth() {
                   </button>
                 </form>
 
-                <p className="text-center text-sm text-ink-5 mt-6">
+                <p className="text-center text-sm text-gray-500 mt-6">
                   Una akaunti?{' '}
                   <button onClick={() => setMode('login')} className="text-primary font-bold hover:underline">
                     Ingia hapa
@@ -366,7 +369,7 @@ export default function Auth() {
           </div>
 
           {/* Footer spacing for mobile */}
-          <div className="h-4 md:h-0" />
+          <div className="h-6 md:h-0" />
         </div>
       </div>
     </div>
