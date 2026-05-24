@@ -134,7 +134,7 @@ const LocationPicker = ({ onLocationSelect, address, setAddress, lat, setLat, ln
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           placeholder="Anwani kamili au jina la eneo..."
-          className="input-field pr-28"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all pr-28"
         />
         <button
           type="button"
@@ -582,7 +582,7 @@ export default function AddProperty() {
                 value={videoUrl}
                 onChange={handleVideoUrlChange}
                 placeholder="https://www.youtube.com/watch?v=..."
-                className="input-field"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all"
               />
             </div>
             
@@ -605,7 +605,7 @@ export default function AddProperty() {
                 type="file"
                 accept="video/mp4,video/webm,video/quicktime"
                 onChange={handleVideoChange}
-                className="input-field"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all"
               />
               <p className="text-2xs text-ink-5 mt-1">Upeo wa ukubwa: 50MB</p>
             </div>
@@ -654,7 +654,7 @@ export default function AddProperty() {
           <div>
             <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Kichwa cha Tangazo *</label>
             <input value={form.title} onChange={e => set('title', e.target.value)}
-              placeholder="mf: Nyumba nzuri Kinondoni 3BR" className="input-field" />
+              placeholder="mf: Nyumba nzuri Kinondoni 3BR" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all" />
           </div>
 
           <div>
@@ -675,7 +675,7 @@ export default function AddProperty() {
           <div>
             <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Maelezo *</label>
             <textarea value={form.description} onChange={e => set('description', e.target.value)}
-              rows={4} placeholder="Elezea mali yako kwa undani -- eneo, hali, facilities..." className="input-field resize-none" />
+              rows={4} placeholder="Elezea mali yako kwa undani -- eneo, hali, facilities..." className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all resize-none" />
           </div>
 
           <div>
@@ -710,19 +710,19 @@ export default function AddProperty() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Jiji/Mji</label>
-              <select value={form.city} onChange={e => set('city', e.target.value)} className="input-field">
+              <select value={form.city} onChange={e => set('city', e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all">
                 {CITIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Mtaa / Kata *</label>
               <input value={form.area} onChange={e => set('area', e.target.value)}
-                placeholder="mf: Kinondoni, Msasani, Oysterbay..." className="input-field" />
+                placeholder="mf: Kinondoni, Msasani, Oysterbay..." className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all" />
             </div>
           </div>
         </div>
 
-        {/* ─── PRICE ─── */}
+        {/* ─── PRICE - FIXED: Better spacing to prevent overlap ─── */}
         <div className="bg-white rounded-2xl m-3 p-4 shadow-soft border border-surface-4 space-y-3">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2"><span>💰</span> Bei</h3>
 
@@ -740,10 +740,17 @@ export default function AddProperty() {
           <div>
             <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-1.5">Bei (TZS) *</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-5 text-sm font-semibold">TSh</span>
-              <input value={form.price} onChange={e => set('price', e.target.value)} type="number"
-                placeholder="350,000" className="input-field pl-14" />
+              {/* Fixed: Increased left padding and adjusted positioning */}
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-semibold z-10">TSh</span>
+              <input 
+                value={form.price} 
+                onChange={e => set('price', e.target.value)} 
+                type="number"
+                placeholder="350,000" 
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all pl-20 text-right"
+              />
             </div>
+            <p className="text-2xs text-ink-5 mt-1">Weka bei kwa TSh (mf: 350000)</p>
           </div>
         </div>
 
@@ -755,7 +762,7 @@ export default function AddProperty() {
               <div key={k}>
                 <label className="block text-xs font-semibold text-ink-5 mb-1.5">{l}</label>
                 <input value={form[k]} onChange={e => set(k, e.target.value)} type="number"
-                  placeholder={ph} className="input-field text-center" />
+                  placeholder={ph} className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all text-center" />
               </div>
             ))}
           </div>
@@ -768,7 +775,7 @@ export default function AddProperty() {
             {AMENITY_OPTIONS.map(a => (
               <button key={a} type="button" onClick={() => toggleAmenity(a)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all active:scale-95
-                  ${amenities.includes(a) ? 'bg-primary text-white border-primary' : 'bg-surface text-ink-4 border-transparent'}`}
+                  ${amenities.includes(a) ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:border-primary/30'}`}
               >
                 {a}
               </button>
@@ -800,7 +807,7 @@ export default function AddProperty() {
 
         {/* ─── SUBMIT ─── */}
         <div className="px-3 pb-5">
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? <><Spinner size="sm" color="white" /> {isEdit ? 'Inasasisha...' : 'Inachapisha...'}</> : (isEdit ? '💾 Hifadhi Mabadiliko' : '📢 Chapisha Tangazo')}
           </button>
         </div>
