@@ -11,10 +11,10 @@ cloudinary.config({
 
 console.log('✅ Cloudinary configured for:', process.env.CLOUDINARY_CLOUD_NAME);
 
-// Upload buffer to Cloudinary (for memory storage)
+// Upload buffer to Cloudinary (FIXED: using cloudinary.uploader.upload_stream)
 const uploadBuffer = async (buffer, options = {}) => {
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.upload_stream(
+    const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: options.folder || 'makaziplus/properties',
         resource_type: options.resource_type || 'image',
