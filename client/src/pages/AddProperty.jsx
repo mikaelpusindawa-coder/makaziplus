@@ -148,7 +148,7 @@ const LocationPicker = ({ onLocationSelect, address, setAddress, lat, setLat, ln
       {(lat && lng) && (
         <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded-xl">
           <span>📍</span>
-          <span>Mahali yamegunduliwa: {lat.toFixed(6)}, {lng.toFixed(6)}</span>
+          <span>Mahali yamegunduliwa: {Number(lat).toFixed(6)}, {Number(lng).toFixed(6)}</span>
           <button
             type="button"
             onClick={() => window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank')}
@@ -220,8 +220,8 @@ export default function AddProperty() {
           property_status: p.property_status || 'available',
           video_url: p.video_url || '',
         });
-        setLatitude(p.latitude || null);
-        setLongitude(p.longitude || null);
+        setLatitude(p.latitude ? Number(p.latitude) : null);
+        setLongitude(p.longitude ? Number(p.longitude) : null);
         setFormattedAddress(p.formatted_address || p.address || '');
         setPlaceId(p.place_id || null);
         setAmenities(p.amenities || []);
