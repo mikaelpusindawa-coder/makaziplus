@@ -1558,4 +1558,171 @@ exports.getAnalyticsCityDistribution = async (req, res) => {
     console.error('getAnalyticsCityDistribution:', e.message);
     res.status(500).json({ success: false, message: 'Hitilafu ya seva' });
   }
+  // ============================================================
+// PRODUCT MODERATION QUEUE (Pending Properties)
+// ============================================================
+
+// Get all pending properties for admin review
+exports.getPendingProperties = async (req, res) => {
+  try {
+    const [properties] = await db.execute(`
+      SELECT p.*, u.name AS owner_name, u.email AS owner_email, u.phone AS owner_phone,
+             (SELECT COUNT(*) FROM property_images WHERE property_id = p.id) as image_count,
+             (SELECT video_url FROM property_videos WHERE property_id = p.id LIMIT 1) as video_url
+      FROM properties p
+      JOIN users u ON u.id = p.owner_id
+      WHERE p.status = 'pending'
+      ORDER BY p.created_at DESC
+    `);
+    
+    // Get images for each property
+    for (let i = 0; i < properties.length; i++) {
+      const [images] = await db.execute(
+        'SELECT id, image_url, is_primary FROM property_images WHERE property_id = ? ORDER BY sort_order',
+        [properties[i].id]
+      );
+      properties[i].images = images;
+      
+      const [amenities] = await db.execute(
+        'SELECT amenity FROM property_amenities WHERE property_id = ?',
+        [properties[i].id]
+      );
+      properties[i].amenities = amenities.map(a => a.amenity);
+    }
+    
+    res.json({ success: true, data: properties });
+  } catch (error) {
+    console.error('getPendingProperties error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Approve a pending property (makes it active)
+exports.approveProperty = async (req, res) => {
+  try {
+    const propId = parseInt(req.params.id);
+    if (isNaN(propId)) {
+      return res.status(400).json({ success: false, message: 'ID si sahihi' });
+    }
+    
+    const [property] = await db.execute(
+      'SELECT owner_id, title FROM properties WHERE id = ? AND status = "pending"',
+      [propId]
+    );
+    
+    if (!property.length) {
+      return res.status(404).json({ success: false, message: 'Mali haipatikani au tayari imekaguliwa' });
+    }
+    
+    await db.execute('UPDATE properties SET status = "active" WHERE id = ?', [propId]);
+    
+    // Notify the owner that their property was approved
+    await db.execute(
+      `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
+       VALUES (?, 'Tangazo Limekubaliwa ✅', 'Tangazo lako "${property[0].title}" limekubaliwa na linapatikana kwa wateja wote.', 'system', ?, 'property', NOW())`,
+      [property[0].owner_id, propId]
+    );
+    
+    sendPushToUser(property[0].owner_id, {
+      title: 'Tangazo Limekubaliwa ✅',
+      body: `"${property[0].title}" limekubaliwa na sasa linapatikana!`,
+      url: `/dashboard`
+    });
+    
+    res.json({ success: true, message: 'Mali imekubaliwa na inaonekana kwa wateja wote.' });
+  } catch (error) {
+    console.error('approveProperty error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Reject a pending property with reason
+exports.rejectProperty = async (req, res) => {
+  try {
+    const propId = parseInt(req.params.id);
+    const { reason } = req.body;
+    
+    if (isNaN(propId)) {
+      return res.status(400).json({ success: false, message: 'ID si sahihi' });
+    }
+    
+    const [property] = await db.execute(
+      'SELECT owner_id, title FROM properties WHERE id = ? AND status = "pending"',
+      [propId]
+    );
+    
+    if (!property.length) {
+      return res.status(404).json({ success: false, message: 'Mali haipatikani au tayari imekaguliwa' });
+    }
+    
+    await db.execute('UPDATE properties SET status = "rejected" WHERE id = ?', [propId]);
+    
+    const rejectReason = reason || 'Mali haikidhi vigezo vya platform yetu. Tafadhali kagua maelezo na jaribu tena.';
+    
+    // Notify the owner that their property was rejected
+    await db.execute(
+      `INSERT INTO notifications (user_id, title, body, type, ref_id, ref_type, created_at)
+       VALUES (?, 'Tangazo Limekataliwa ❌', 'Tangazo lako "${property[0].title}" limekataliwa. Sababu: ${rejectReason}', 'system', ?, 'property', NOW())`,
+      [property[0].owner_id, propId]
+    );
+    
+    sendPushToUser(property[0].owner_id, {
+      title: 'Tangazo Limekataliwa ❌',
+      body: `"${property[0].title}" limekataliwa. Sababu: ${rejectReason.substring(0, 100)}`,
+      url: `/dashboard`
+    });
+    
+    res.json({ success: true, message: 'Mali imekataliwa. Mmiliki atajulishwa.' });
+  } catch (error) {
+    console.error('rejectProperty error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get single pending property details for inspection
+exports.getPendingPropertyDetails = async (req, res) => {
+  try {
+    const propId = parseInt(req.params.id);
+    if (isNaN(propId)) {
+      return res.status(400).json({ success: false, message: 'ID si sahihi' });
+    }
+    
+    const [properties] = await db.execute(`
+      SELECT p.*, u.name AS owner_name, u.email AS owner_email, u.phone AS owner_phone,
+             u.verified AS owner_verified, u.role AS owner_role
+      FROM properties p
+      JOIN users u ON u.id = p.owner_id
+      WHERE p.id = ? AND p.status = 'pending'
+    `, [propId]);
+    
+    if (!properties.length) {
+      return res.status(404).json({ success: false, message: 'Mali haipatikani au tayari imekaguliwa' });
+    }
+    
+    const property = properties[0];
+    
+    const [images] = await db.execute(
+      'SELECT id, image_url, is_primary FROM property_images WHERE property_id = ? ORDER BY sort_order',
+      [propId]
+    );
+    property.images = images;
+    
+    const [amenities] = await db.execute(
+      'SELECT amenity FROM property_amenities WHERE property_id = ?',
+      [propId]
+    );
+    property.amenities = amenities.map(a => a.amenity);
+    
+    const [videos] = await db.execute(
+      'SELECT video_url FROM property_videos WHERE property_id = ? LIMIT 1',
+      [propId]
+    );
+    property.video_url = videos.length ? videos[0].video_url : null;
+    
+    res.json({ success: true, data: property });
+  } catch (error) {
+    console.error('getPendingPropertyDetails error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 };
