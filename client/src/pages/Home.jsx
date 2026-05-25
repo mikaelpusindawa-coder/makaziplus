@@ -8,13 +8,12 @@ import { SkeletonCard, SkeletonListCard } from '../components/common/Spinner';
 import api from '../utils/api';
 import { formatPrice, getPropertyImage, getPlaceholderImage, timeAgo } from '../utils/helpers';
 
-// SVG used only as an img onError last-resort (never shown as actual hero slide)
+// SVG used only as an img onError last-resort
 const _HERO_ERROR_SVG = (() => {
   const s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1B4F72"/><stop offset="1" stop-color="#2E86C1"/></linearGradient></defs><rect width="1200" height="500" fill="url(%23g)"/><text x="600" y="250" text-anchor="middle" font-size="36" font-weight="700" font-family="system-ui,sans-serif" fill="rgba(255,255,255,0.9)">MakaziPlus</text></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(s)}`;
 })();
 
-// Fallback hero slides
 const FALLBACK_HERO_IMAGES = [
   {
     id: 'f1', isFallback: true, is_premium: 1,
@@ -320,7 +319,7 @@ export default function Home() {
       <TopBar />
       <HeroSlider properties={heroWithImages} loading={loadingHero} />
 
-      <div className="flex justify-around px-4 py-4 md:max-w-2xl md:mx-auto">
+      <div className="flex justify-around px-4 py-4 max-w-7xl mx-auto">
         {STATS.map(s => (
           <div key={s.label} className="text-center">
             <div className="text-xl md:text-2xl font-serif font-semibold text-primary">{s.value}</div>
@@ -329,7 +328,7 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 max-w-7xl mx-auto">
         {FILTERS.map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
@@ -339,10 +338,10 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Featured Properties - Responsive Grid */}
+      {/* Featured Properties - Responsive Grid with better spacing */}
       {featured.length > 0 && (
-        <div className="mt-4 md:max-w-6xl md:mx-auto">
-          <div className="flex items-center justify-between px-4 mb-3">
+        <div className="mt-4 max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-ink flex items-center gap-2">
               Featured <span className="text-gold">⭐</span>
             </h2>
@@ -351,19 +350,19 @@ export default function Home() {
             </button>
           </div>
           {loadingF ? (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-4 md:overflow-visible">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:overflow-visible">
               {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
             </div>
           ) : (
             <>
               {/* Mobile: Horizontal scroll */}
-              <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2 md:hidden">
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:hidden">
                 {featured.map(p => (
                   <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                 ))}
               </div>
-              {/* Desktop: Grid layout */}
-              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4">
+              {/* Desktop: Grid layout with even spacing */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {featured.map(p => (
                   <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                 ))}
@@ -375,41 +374,39 @@ export default function Home() {
 
       {/* Newest Properties Marquee */}
       {marqueeItems.length > 0 && (
-        <div className="mt-6">
-          <div className="flex items-center justify-between px-4 mb-2.5">
+        <div className="mt-6 max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-2.5">
             <h2 className="text-base font-bold text-ink flex items-center gap-2">
               🆕 Mpya Zaidi <span className="text-green-500 text-sm animate-pulse-soft">● Live</span>
             </h2>
             <button onClick={() => navigate('/search')} className="text-xs font-medium text-primary hover:underline">Zaidi →</button>
           </div>
-          <div className="px-4">
-            <RecentMarquee items={marqueeItems} />
-          </div>
+          <RecentMarquee items={marqueeItems} />
         </div>
       )}
 
-      {/* All Properties - Responsive Grid */}
-      <div className="mt-5 md:max-w-6xl md:mx-auto">
-        <div className="flex items-center justify-between px-4 mb-3">
+      {/* All Properties - Responsive Grid with better spacing */}
+      <div className="mt-5 max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
           <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline">Zaidi →</button>
         </div>
         {loadingN ? (
-          <div className="space-y-0 px-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
+          <div className="space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:space-y-0">
             {[1, 2, 3, 4].map(i => <SkeletonListCard key={i} />)}
           </div>
         ) : (
           <>
             {newest.length > 0 ? (
               <>
-                {/* Mobile: Horizontal cards with horizontal layout */}
+                {/* Mobile: Vertical stack with horizontal cards */}
                 <div className="space-y-2 md:hidden">
                   {newest.map(p => (
                     <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
                   ))}
                 </div>
-                {/* Desktop: Grid with standard cards (not horizontal) */}
-                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4">
+                {/* Desktop: Grid with standard cards, better spacing */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                   {newest.map(p => (
                     <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                   ))}
@@ -428,7 +425,7 @@ export default function Home() {
       </div>
 
       {!user && (
-        <div className="mx-4 mt-6 mb-4 bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
+        <div className="mx-4 mt-6 mb-4 max-w-7xl mx-auto bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
           <h3 className="font-serif text-xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
           <p className="text-white/70 text-sm mb-4">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
           <button onClick={() => navigate('/auth')} className="bg-white text-primary px-6 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift">
