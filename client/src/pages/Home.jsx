@@ -14,9 +14,7 @@ const _HERO_ERROR_SVG = (() => {
   return `data:image/svg+xml,${encodeURIComponent(s)}`;
 })();
 
-// Fallback hero slides — Unsplash property photos, shown ONLY when the platform
-// has zero uploaded property images. The moment any real image is uploaded these
-// are replaced automatically by real listing photos.
+// Fallback hero slides
 const FALLBACK_HERO_IMAGES = [
   {
     id: 'f1', isFallback: true, is_premium: 1,
@@ -58,49 +56,35 @@ const FILTERS = [
   { id: 'arusha', label: 'Arusha', icon: '📍' },
 ];
 
-// Hero Slider Component with Auto-cycling
+// Hero Slider Component
 const HeroSlider = ({ properties, loading }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
 
-  // Auto-cycling interval - FIXED: now working
   useEffect(() => {
     if (heroPaused || loading) return;
-    
     const displayItems = properties.length > 0 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
     if (displayItems.length <= 1) return;
-    
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % displayItems.length);
-    }, 5000); // Change slide every 5 seconds
-    
+    }, 5000);
     return () => clearInterval(interval);
   }, [heroPaused, loading, properties]);
 
-  // Touch handlers for mobile swipe
-  const handleTouchStart = (e) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
+  const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
+  const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const difference = touchStart - touchEnd;
     const displayItems = properties.length > 0 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
-    
     if (difference > 50) {
-      // Swipe left - next slide
       setCurrentIndex((prev) => (prev + 1) % displayItems.length);
       setHeroPaused(true);
       setTimeout(() => setHeroPaused(false), 8000);
     }
     if (difference < -50) {
-      // Swipe right - previous slide
       setCurrentIndex((prev) => (prev - 1 + displayItems.length) % displayItems.length);
       setHeroPaused(true);
       setTimeout(() => setHeroPaused(false), 8000);
@@ -121,7 +105,6 @@ const HeroSlider = ({ properties, loading }) => {
   const displayItems = properties.length > 0 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
   const current = displayItems[currentIndex];
 
-  // Manual navigation functions
   const goToSlide = (index) => {
     setCurrentIndex(index);
     setHeroPaused(true);
@@ -150,7 +133,6 @@ const HeroSlider = ({ properties, loading }) => {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Main Image */}
       <img
         src={current.isFallback ? current.image_url : getPropertyImage(current)}
         alt={current.title}
@@ -158,18 +140,12 @@ const HeroSlider = ({ properties, loading }) => {
         className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
         onError={(e) => { e.target.onerror = null; e.target.src = _HERO_ERROR_SVG; }}
       />
-      
-      {/* Overlay Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-transparent" />
-      
-      {/* Premium Badge */}
       {current.is_premium === 1 && (
         <div className="absolute top-4 left-4 bg-gold text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-gold z-10">
           ⭐ Premium Listing
         </div>
       )}
-      
-      {/* Content */}
       <div className="absolute inset-0 p-5 md:p-10 flex flex-col justify-end z-10">
         <div className="animate-fade-in-up">
           <p className="text-white/80 text-sm font-medium mb-1">
@@ -188,41 +164,24 @@ const HeroSlider = ({ properties, loading }) => {
           )}
         </div>
       </div>
-      
-      {/* Navigation Arrows - Desktop */}
-      <button
-        onClick={(e) => { e.stopPropagation(); prevSlide(); }}
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20"
-      >
+      <button onClick={(e) => { e.stopPropagation(); prevSlide(); }}
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
         <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 md:h-5 stroke-white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
         </svg>
       </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); nextSlide(); }}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20"
-      >
+      <button onClick={(e) => { e.stopPropagation(); nextSlide(); }}
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
         <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 md:h-5 stroke-white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6" />
         </svg>
       </button>
-      
-      {/* Dots Indicator */}
       <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
         {displayItems.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={(e) => { e.stopPropagation(); goToSlide(idx); }}
-            className={`transition-all duration-300 rounded-full ${
-              currentIndex === idx 
-                ? 'w-8 h-1.5 bg-white' 
-                : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/60'
-            }`}
-          />
+          <button key={idx} onClick={(e) => { e.stopPropagation(); goToSlide(idx); }}
+            className={`transition-all duration-300 rounded-full ${currentIndex === idx ? 'w-8 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/60'}`} />
         ))}
       </div>
-      
-      {/* Auto-play indicator bar */}
       {!heroPaused && !loading && displayItems.length > 1 && (
         <div className="absolute bottom-0 left-0 h-1 bg-gold animate-slide-progress" style={{ width: '100%' }} />
       )}
@@ -230,7 +189,7 @@ const HeroSlider = ({ properties, loading }) => {
   );
 };
 
-// Recent Properties Marquee - FIXED price formatting
+// Recent Properties Marquee
 const RecentMarquee = ({ items }) => {
   const navigate = useNavigate();
   if (!items.length) return null;
@@ -240,19 +199,11 @@ const RecentMarquee = ({ items }) => {
     <div className="overflow-hidden relative">
       <div className="flex gap-3 animate-marquee" style={{ width: 'max-content' }}>
         {doubled.map((p, i) => (
-          <div
-            key={`${p.id}-${i}`}
-            onClick={() => navigate(`/property/${p.id}`)}
-            className="flex-shrink-0 w-44 bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4 cursor-pointer hover:shadow-card transition-all hover:-translate-y-1"
-          >
+          <div key={`${p.id}-${i}`} onClick={() => navigate(`/property/${p.id}`)}
+            className="flex-shrink-0 w-44 bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4 cursor-pointer hover:shadow-card transition-all hover:-translate-y-1">
             <div className="h-24 relative overflow-hidden bg-surface-3">
-              <img
-                src={getPropertyImage(p)}
-                alt={p.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
-              />
+              <img src={getPropertyImage(p)} alt={p.title} className="w-full h-full object-cover" loading="lazy"
+                onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }} />
               <div className="absolute bottom-1.5 left-1.5 bg-black/50 backdrop-blur-sm text-white text-2xs font-bold px-1.5 py-0.5 rounded-full">
                 🆕 {timeAgo(p.created_at)}
               </div>
@@ -318,7 +269,7 @@ export default function Home() {
   const fetchNewest = useCallback(async () => {
     setLoadingN(true);
     try {
-      const r = await api.get('/properties', { params: { ...buildParams(), limit: 10 } });
+      const r = await api.get('/properties', { params: { ...buildParams(), limit: 12 } });
       setNewest(r.data.data || []);
     } catch (err) {
       console.error('Newest fetch error:', err);
@@ -380,19 +331,17 @@ export default function Home() {
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto">
         {FILTERS.map(f => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
+          <button key={f.id} onClick={() => setFilter(f.id)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
-              ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}
-          >
+              ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
             <span>{f.icon}</span> {f.label}
           </button>
         ))}
       </div>
 
+      {/* Featured Properties - Responsive Grid */}
       {featured.length > 0 && (
-        <div className="mt-4 md:max-w-4xl md:mx-auto">
+        <div className="mt-4 md:max-w-6xl md:mx-auto">
           <div className="flex items-center justify-between px-4 mb-3">
             <h2 className="text-lg font-bold text-ink flex items-center gap-2">
               Featured <span className="text-gold">⭐</span>
@@ -402,19 +351,29 @@ export default function Home() {
             </button>
           </div>
           {loadingF ? (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
-              {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+            <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-4 md:overflow-visible">
+              {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
             </div>
           ) : (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
-              {featured.map(p => (
-                <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
-              ))}
-            </div>
+            <>
+              {/* Mobile: Horizontal scroll */}
+              <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2 md:hidden">
+                {featured.map(p => (
+                  <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                ))}
+              </div>
+              {/* Desktop: Grid layout */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4">
+                {featured.map(p => (
+                  <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
 
+      {/* Newest Properties Marquee */}
       {marqueeItems.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between px-4 mb-2.5">
@@ -429,19 +388,33 @@ export default function Home() {
         </div>
       )}
 
-      <div className="mt-5 md:max-w-4xl md:mx-auto">
+      {/* All Properties - Responsive Grid */}
+      <div className="mt-5 md:max-w-6xl md:mx-auto">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
           <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline">Zaidi →</button>
         </div>
         {loadingN ? (
-          <div className="space-y-0">{[1, 2, 3].map(i => <SkeletonListCard key={i} />)}</div>
+          <div className="space-y-0 px-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
+            {[1, 2, 3, 4].map(i => <SkeletonListCard key={i} />)}
+          </div>
         ) : (
-          <div>
+          <>
             {newest.length > 0 ? (
-              newest.map(p => (
-                <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
-              ))
+              <>
+                {/* Mobile: Horizontal cards with horizontal layout */}
+                <div className="space-y-2 md:hidden">
+                  {newest.map(p => (
+                    <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                  ))}
+                </div>
+                {/* Desktop: Grid with standard cards (not horizontal) */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4">
+                  {newest.map(p => (
+                    <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="text-center py-12">
                 <p className="text-sm text-ink-5">Hakuna mali zilizoorodheshwa bado</p>
@@ -450,7 +423,7 @@ export default function Home() {
                 </button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
