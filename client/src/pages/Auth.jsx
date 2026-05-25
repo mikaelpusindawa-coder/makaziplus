@@ -22,6 +22,16 @@ const GENDERS = [
   { v: 'other', l: 'Nyingine' },
 ];
 
+// Key for storing return URL (must match LoginPromptModal.jsx)
+const RETURN_URL_KEY = 'makaziplus_return_url';
+
+// Get and clear return URL
+const getReturnUrl = () => {
+  const url = localStorage.getItem(RETURN_URL_KEY);
+  localStorage.removeItem(RETURN_URL_KEY);
+  return url;
+};
+
 export default function Auth() {
   const navigate = useNavigate();
   const { login, register } = useAuth();
@@ -52,7 +62,16 @@ export default function Auth() {
     setLoading(true);
     try {
       await login(form.email, form.password);
-      navigate('/');
+      
+      // Check for saved return URL after successful login
+      const returnUrl = getReturnUrl();
+      if (returnUrl && (returnUrl.startsWith('/property/') || returnUrl.startsWith('/chat') || returnUrl.startsWith('/dashboard'))) {
+        // Redirect back to the original page
+        navigate(returnUrl);
+      } else {
+        // Fallback to home page
+        navigate('/');
+      }
     } catch (err) {
       toast(err.response?.data?.message || err.message, 'error');
     } finally {
@@ -84,7 +103,16 @@ export default function Auth() {
         role,
         gender: gender || undefined
       });
-      navigate('/');
+      
+      // Check for saved return URL after successful registration
+      const returnUrl = getReturnUrl();
+      if (returnUrl && (returnUrl.startsWith('/property/') || returnUrl.startsWith('/chat') || returnUrl.startsWith('/dashboard'))) {
+        // Redirect back to the original page
+        navigate(returnUrl);
+      } else {
+        // Fallback to home page
+        navigate('/');
+      }
     } catch (err) {
       toast(err.response?.data?.message || err.message, 'error');
     } finally {
