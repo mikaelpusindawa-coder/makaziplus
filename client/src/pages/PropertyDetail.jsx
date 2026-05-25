@@ -26,7 +26,7 @@ const clearIntent = () => {
   localStorage.removeItem(INTENT_KEY);
 };
 
-// Get saved intent
+// Get saved intent (does NOT clear it)
 const getSavedIntent = () => {
   const saved = localStorage.getItem(INTENT_KEY);
   console.log('📦 getSavedIntent: Raw saved data:', saved);
@@ -124,13 +124,15 @@ export default function PropertyDetail() {
     console.log('🎯 Executing saved intent:', intent, data);
     console.log('🎯 Current property ID:', id, 'Owner ID:', property.owner_id);
     
+    // Mark as executed immediately to prevent multiple attempts
+    setIntentExecuted(true);
+    
     switch (intent) {
       case 'rating':
         if (data.ownerId === property.owner_id) {
           console.log('✅ Opening rating modal');
           setShowRatingModal(true);
           toast('Tathmini yako iko tayari. Weka nyota zako! ⭐', 'info');
-          setIntentExecuted(true);
           clearIntent();
         } else {
           console.log('❌ Owner ID mismatch:', data.ownerId, 'vs', property.owner_id);
@@ -141,7 +143,6 @@ export default function PropertyDetail() {
           console.log('✅ Opening booking modal');
           setShowBookingModal(true);
           toast('Kamilisha booking yako kwa kuchagua tarehe 📅', 'info');
-          setIntentExecuted(true);
           clearIntent();
         } else {
           console.log('❌ Property ID mismatch:', data.propertyId, 'vs', id);
@@ -150,9 +151,8 @@ export default function PropertyDetail() {
       case 'chat':
         if (data.ownerId === property.owner_id) {
           console.log('✅ Opening chat');
-          navigate(`/chat?userId=${data.ownerId}`);
-          setIntentExecuted(true);
           clearIntent();
+          navigate(`/chat?userId=${data.ownerId}`);
         } else {
           console.log('❌ Owner ID mismatch for chat:', data.ownerId, 'vs', property.owner_id);
         }
@@ -160,9 +160,8 @@ export default function PropertyDetail() {
       case 'favorite':
         if (data.propertyId === parseInt(id)) {
           console.log('✅ Toggling favorite');
-          toggleFavAfterLogin();
-          setIntentExecuted(true);
           clearIntent();
+          toggleFavAfterLogin();
         } else {
           console.log('❌ Property ID mismatch for favorite:', data.propertyId, 'vs', id);
         }
@@ -198,10 +197,19 @@ export default function PropertyDetail() {
     loadProperty();
   }, [id, user, navigate]);
 
-  // Reset intent executed flag when property changes
+  // Reset intent executed flag when property changes or when coming back from login
   useEffect(() => {
+    console.log('🔄 Resetting intentExecuted flag for property ID:', id);
     setIntentExecuted(false);
-  }, [id]);
+    
+    // Also check for saved intent immediately when user is logged in
+    if (user) {
+      const savedIntent = getSavedIntent();
+      if (savedIntent) {
+        console.log('🔄 Found saved intent on mount, will execute after property loads');
+      }
+    }
+  }, [id, user]);
 
   // Load owner ratings
   useEffect(() => {
