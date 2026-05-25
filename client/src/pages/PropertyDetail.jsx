@@ -34,7 +34,6 @@ const getSavedIntent = () => {
   try {
     const intent = JSON.parse(saved);
     console.log('📦 getSavedIntent: Parsed intent:', intent);
-    // Expire after 10 minutes
     if (Date.now() - intent.timestamp > 10 * 60 * 1000) {
       console.log('📦 getSavedIntent: Intent expired, clearing');
       clearIntent();
@@ -64,6 +63,7 @@ export default function PropertyDetail() {
 
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isFav, setIsFav] = useState(false);
   const [mainImg, setMainImg] = useState('');
   const [imgIdx, setImgIdx] = useState(0);
@@ -97,19 +97,60 @@ export default function PropertyDetail() {
   useEffect(() => {
     const returnUrl = getReturnUrl();
     console.log('🔙 Return URL check:', returnUrl);
+    
     if (returnUrl && returnUrl.includes(`/property/${id}`)) {
       console.log('🔙 Already on property page, will execute intent');
     } else if (returnUrl && returnUrl.includes('/property/')) {
       console.log('🔙 Navigating to return URL:', returnUrl);
       const match = returnUrl.match(/\/property\/(\d+)/);
       if (match && match[1] !== id) {
-        navigate(returnUrl);
+        navigate(returnUrl, { replace: true });
         return;
       }
     }
   }, [id, navigate]);
 
-  // Check for saved intent AFTER property is loaded
+  // Load property data
+  const loadProperty = async () => {
+    try {
+      console.log('📡 Loading property ID:', id);
+      setLoading(true);
+      setError(null);
+      
+      const r = await api.get(`/properties/${id}`);
+      console.log('📡 Property data received:', r.data.data);
+      setProperty(r.data.data);
+      
+      const imgs = r.data.data.images || [];
+      if (imgs.length) {
+        setMainImg(resolveImageUrl(imgs[0].image_url) || '');
+      }
+      
+      if (user) {
+        const fav = await api.get(`/favorites/${id}/check`);
+        setIsFav(fav.data.favorited);
+      }
+    } catch (err) {
+      console.error('Load property error:', err);
+      setError('Mali haipatikani');
+      toast('Mali haipatikani', 'error');
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProperty();
+  }, [id, user]);
+
+  // Reset intent executed flag when property changes
+  useEffect(() => {
+    console.log('🔄 Resetting for property ID:', id);
+    setIntentExecuted(false);
+  }, [id]);
+
+  // Check for saved intent AFTER property is loaded AND user is logged in
   useEffect(() => {
     console.log('🔍 Intent check: user=', !!user, 'property=', !!property, 'intentExecuted=', intentExecuted);
     
@@ -122,21 +163,16 @@ export default function PropertyDetail() {
     
     const { intent, data } = savedIntent;
     console.log('🎯 Executing saved intent:', intent, data);
-    console.log('🎯 Current property ID:', id, 'Owner ID:', property.owner_id);
     
-    // Mark as executed immediately to prevent multiple attempts
+    // Mark as executed immediately
     setIntentExecuted(true);
     
     switch (intent) {
       case 'rating':
-        if (data.ownerId === property.owner_id) {
-          console.log('✅ Opening rating modal');
-          setShowRatingModal(true);
-          toast('Tathmini yako iko tayari. Weka nyota zako! ⭐', 'info');
-          clearIntent();
-        } else {
-          console.log('❌ Owner ID mismatch:', data.ownerId, 'vs', property.owner_id);
-        }
+        console.log('✅ Opening rating modal');
+        setShowRatingModal(true);
+        toast('Tathmini yako iko tayari. Weka nyota zako! ⭐', 'info');
+        clearIntent();
         break;
       case 'booking':
         if (data.propertyId === parseInt(id)) {
@@ -145,7 +181,7 @@ export default function PropertyDetail() {
           toast('Kamilisha booking yako kwa kuchagua tarehe 📅', 'info');
           clearIntent();
         } else {
-          console.log('❌ Property ID mismatch:', data.propertyId, 'vs', id);
+          console.log('❌ Property ID mismatch');
         }
         break;
       case 'chat':
@@ -154,7 +190,7 @@ export default function PropertyDetail() {
           clearIntent();
           navigate(`/chat?userId=${data.ownerId}`);
         } else {
-          console.log('❌ Owner ID mismatch for chat:', data.ownerId, 'vs', property.owner_id);
+          console.log('❌ Owner ID mismatch');
         }
         break;
       case 'favorite':
@@ -163,7 +199,7 @@ export default function PropertyDetail() {
           clearIntent();
           toggleFavAfterLogin();
         } else {
-          console.log('❌ Property ID mismatch for favorite:', data.propertyId, 'vs', id);
+          console.log('❌ Property ID mismatch');
         }
         break;
       default:
@@ -171,45 +207,6 @@ export default function PropertyDetail() {
         break;
     }
   }, [user, property, id, navigate, toast, intentExecuted]);
-
-  const loadProperty = async () => {
-    try {
-      console.log('📡 Loading property ID:', id);
-      const r = await api.get(`/properties/${id}`);
-      setProperty(r.data.data);
-      const imgs = r.data.data.images || [];
-      if (imgs.length) {
-        setMainImg(resolveImageUrl(imgs[0].image_url) || '');
-      }
-      if (user) {
-        const fav = await api.get(`/favorites/${id}/check`);
-        setIsFav(fav.data.favorited);
-      }
-    } catch (err) {
-      console.error('Load property error:', err);
-      navigate('/');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadProperty();
-  }, [id, user, navigate]);
-
-  // Reset intent executed flag when property changes or when coming back from login
-  useEffect(() => {
-    console.log('🔄 Resetting intentExecuted flag for property ID:', id);
-    setIntentExecuted(false);
-    
-    // Also check for saved intent immediately when user is logged in
-    if (user) {
-      const savedIntent = getSavedIntent();
-      if (savedIntent) {
-        console.log('🔄 Found saved intent on mount, will execute after property loads');
-      }
-    }
-  }, [id, user]);
 
   // Load owner ratings
   useEffect(() => {
@@ -371,6 +368,18 @@ export default function PropertyDetail() {
     </div>
   );
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-surface">
+        <div className="text-center">
+          <div className="text-4xl mb-4">🏠</div>
+          <p className="text-ink-5">{error}</p>
+          <button onClick={() => navigate('/')} className="btn-primary mt-4">Rudi Nyumbani</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!property) return null;
 
   const p = property;
@@ -454,9 +463,8 @@ export default function PropertyDetail() {
         </div>
       )}
 
-      {/* BODY */}
+      {/* BODY - rest of the component remains the same */}
       <div className="px-4 pt-5 md:max-w-3xl md:mx-auto">
-
         {/* Price + Title + Time uploaded */}
         <div className="mb-4">
           <div className="flex items-start justify-between gap-3 flex-wrap">
