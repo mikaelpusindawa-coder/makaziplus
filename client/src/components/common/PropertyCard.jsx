@@ -21,7 +21,8 @@ export const PropertyCard = ({ property: p, onFav, isFav }) => {
       className="bg-white rounded-xl overflow-hidden shadow-soft border border-surface-4
         cursor-pointer flex flex-col w-full min-w-0 h-full hover:shadow-md transition-all duration-200" 
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-3">
+      {/* Aspect Ratio changed to aspect-[16/10] on mobile to give images a wider look when stacked in 1 column */}
+      <div className="relative aspect-[16/10] sm:aspect-[4/3] w-full overflow-hidden bg-surface-3">
         <img src={img} alt={p.title} loading="lazy"
           className="w-full h-full object-cover transition-transform duration-300 hover:scale-103"
           onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
@@ -45,23 +46,24 @@ export const PropertyCard = ({ property: p, onFav, isFav }) => {
         </div>
       </div>
       
-      <div className="p-2.5 flex-1 flex flex-col justify-between min-w-0">
+      {/* Typography paddings and limits calibrated perfectly for spacious 1-column reading layout */}
+      <div className="p-3 sm:p-2.5 flex-1 flex flex-col justify-between min-w-0">
         <div className="min-w-0">
-          <div className="text-xs sm:text-sm font-black text-primary truncate">
+          <div className="text-sm sm:text-base md:text-sm font-black text-primary truncate">
             {formatPrice(p.price)}
-            <span className="text-[10px] font-normal text-ink-5 ml-0.5">
+            <span className="text-xs sm:text-[10px] font-normal text-ink-5 ml-0.5">
               {p.price_type === 'rent' ? '/mw' : ''}
             </span>
           </div>
-          <p className="text-2xs sm:text-xs font-bold text-ink mt-0.5 truncate">{p.title}</p>
-          <p className="text-[10px] text-ink-5 mt-0.5 truncate">
+          <p className="text-xs sm:text-xs font-bold text-ink mt-0.5 truncate">{p.title}</p>
+          <p className="text-xs sm:text-[10px] text-ink-5 mt-0.5 truncate">
             📍 {p.area}
           </p>
         </div>
-        <div className="flex gap-1 mt-2 flex-wrap">
-          {p.bedrooms > 0 && <span className="bg-surface-3 text-ink-4 text-[9px] px-1.5 py-0.5 rounded font-medium">🛏 {p.bedrooms}</span>}
-          {p.bathrooms > 0 && <span className="bg-surface-3 text-ink-4 text-[9px] px-1.5 py-0.5 rounded font-medium">🚿 {p.bathrooms}</span>}
-          <span className="bg-surface-3 text-ink-4 text-[9px] px-1.5 py-0.5 rounded font-medium">👁 {p.views}</span>
+        <div className="flex gap-1.5 mt-2.5 flex-wrap">
+          {p.bedrooms > 0 && <span className="bg-surface-3 text-ink-4 text-[10px] sm:text-[9px] px-2 py-0.5 sm:px-1.5 rounded font-medium">🛏 {p.bedrooms}</span>}
+          {p.bathrooms > 0 && <span className="bg-surface-3 text-ink-4 text-[10px] sm:text-[9px] px-2 py-0.5 sm:px-1.5 rounded font-medium">🚿 {p.bathrooms}</span>}
+          <span className="bg-surface-3 text-ink-4 text-[10px] sm:text-[9px] px-2 py-0.5 sm:px-1.5 rounded font-medium">👁 {p.views}</span>
         </div>
       </div>
     </div>
