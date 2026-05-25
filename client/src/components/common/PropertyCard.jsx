@@ -32,6 +32,7 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
               ⭐ Prem
             </div>
           )}
+          {/* Video Badge */}
           {(p.video_url || p.video_file) && (
             <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
               <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" stroke="currentColor" strokeWidth="1">
@@ -77,13 +78,12 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
     );
   }
 
-  // Standard card - optimized for grid layout
   return (
     <div onClick={() => navigate(`/property/${p.id}`)}
       className="card-hover bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4
-        cursor-pointer h-full flex flex-col"
+        cursor-pointer flex-shrink-0 w-48 md:w-60"
     >
-      <div className="relative aspect-square md:aspect-[4/3] overflow-hidden bg-surface-3">
+      <div className="relative h-32 md:h-44 overflow-hidden bg-surface-3">
         <img src={img} alt={p.title} loading="lazy"
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
@@ -93,6 +93,7 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
             ⭐ Premium
           </div>
         )}
+        {/* Video Badge */}
         {(p.video_url || p.video_file) && (
           <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
             <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" stroke="currentColor" strokeWidth="1">
@@ -110,11 +111,11 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
             <HeartIcon filled={isFav} />
           </button>
         )}
-        <div className="absolute bottom-2 left-2 bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize">
+        <div className="absolute bottom-2 right-2 bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize">
           {p.type}
         </div>
       </div>
-      <div className="p-3 flex-1 flex flex-col">
+      <div className="p-3">
         <div className="font-serif text-base font-semibold text-primary">
           {formatPrice(p.price)}
           <span className="font-sans text-xs font-normal text-ink-5 ml-1">
