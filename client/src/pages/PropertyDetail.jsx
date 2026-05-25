@@ -544,56 +544,73 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        {/* OWNER CARD */}
+        {/* OWNER CARD - FIXED FOR DESKTOP */}
         <div className="mb-5">
           <h2 className="text-sm font-bold text-ink mb-2">Wasiliana Na</h2>
-          <div className="bg-white rounded-xl p-3 shadow-soft border border-surface-4">
-            <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-primary-50">
-                <img src={ownerImg} alt={p.owner_name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
+          <div className="bg-white rounded-xl p-4 shadow-soft border border-surface-4">
+            {/* Owner Info Row */}
+            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+              <div className="flex items-start gap-3 flex-1">
+                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-primary-50">
+                  <img src={ownerImg} alt={p.owner_name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm text-ink flex items-center gap-1.5 flex-wrap">
+                    {p.owner_name}
+                    {p.owner_verified && <span className="badge badge-primary text-2xs">✓ Amethibitishwa</span>}
+                    {p.owner_plan === 'pro' && <span className="badge badge-gold text-2xs">⭐ Pro</span>}
+                  </div>
+                  <div className="text-2xs text-ink-5 mt-0.5">
+                    {p.owner_role === 'agent' ? '🧑‍💼 Dalali' : '🏠 Mwenye Nyumba'}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    {renderStars(Math.round(ownerRating || 0), 'xs')}
+                    <span className="text-2xs font-semibold text-ink-4">
+                      {ownerRating ? parseFloat(ownerRating).toFixed(1) : '--'}
+                    </span>
+                    <span className="text-2xs text-ink-6">({ownerReviews.length || 0})</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm text-ink flex items-center gap-1.5 flex-wrap">
-                  {p.owner_name}
-                  {p.owner_verified && <span className="badge badge-primary text-2xs">✓ Amethibitishwa</span>}
-                  {p.owner_plan === 'pro' && <span className="badge badge-gold text-2xs">⭐ Pro</span>}
-                </div>
-                <div className="text-2xs text-ink-5 mt-0.5">
-                  {p.owner_role === 'agent' ? '🧑‍💼 Dalali' : '🏠 Mwenye Nyumba'}
-                </div>
-                <div className="flex items-center gap-1 mt-1">
-                  {renderStars(Math.round(ownerRating || 0), 'xs')}
-                  <span className="text-2xs font-semibold text-ink-4">
-                    {ownerRating ? parseFloat(ownerRating).toFixed(1) : '--'}
-                  </span>
-                  <span className="text-2xs text-ink-6">({ownerReviews.length || 0})</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5 flex-shrink-0">
+              {/* Action Buttons - side by side on desktop */}
+              <div className="flex flex-row gap-2 flex-shrink-0 mt-3 sm:mt-0">
                 <button onClick={openChat}
-                  className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-lg text-2xs font-bold active:scale-95 transition-all shadow-green"
+                  className="flex items-center gap-1 bg-primary text-white px-3 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all shadow-green"
                 >
                   💬 Chat
                 </button>
                 <button onClick={handleCall}
-                  className="flex items-center gap-1 bg-white border border-primary text-primary px-3 py-1.5 rounded-lg text-2xs font-bold active:scale-95 transition-all"
+                  className="flex items-center gap-1 bg-white border border-primary text-primary px-3 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all"
                 >
                   📞 Piga
                 </button>
               </div>
             </div>
 
-            {/* Rate button */}
+            {/* Rate button - full width below */}
             {user && !isOwnProperty && (
               <button onClick={() => setShowRatingModal(true)}
-                className="w-full mt-2 py-2 border border-gold bg-gold-50 text-gold-600 rounded-lg text-xs font-bold active:scale-[.98] transition-all flex items-center justify-center gap-1"
+                className="w-full mt-3 py-2 border border-gold bg-gold-50 text-gold-600 rounded-lg text-xs font-bold active:scale-[.98] transition-all flex items-center justify-center gap-1"
               >
                 ⭐ Kadiria {p.owner_role === 'agent' ? 'Dalali' : 'Mwenye Nyumba'}
               </button>
             )}
 
+            {/* Owner reviews preview */}
+            {ownerReviews.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-surface-4">
+                <p className="text-2xs font-semibold text-ink-4 mb-1">Maoni:</p>
+                {ownerReviews.slice(0, 1).map(r => (
+                  <div key={r.id} className="text-2xs text-ink-5">
+                    <div className="flex items-center gap-0.5">{renderStars(r.rating, 'xs')}</div>
+                    <p className="italic line-clamp-1">"{r.review?.substring(0, 50)}"</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {user && isOwnProperty && (
-              <div className="mt-2 text-center text-2xs text-blue-600 bg-blue-50 py-1.5 rounded-lg">
+              <div className="mt-3 text-center text-2xs text-blue-600 bg-blue-50 py-1.5 rounded-lg">
                 ℹ️ Tangazo lako
               </div>
             )}
@@ -603,7 +620,7 @@ export default function PropertyDetail() {
                 saveIntent('rating', { ownerId: p.owner_id, ownerName: p.owner_name });
                 setLoginPrompt({ open: true, action: 'kutoa tathmini', intent: 'rating' });
               }}
-                className="w-full mt-2 py-2 bg-surface border border-surface-4 text-ink-4 rounded-lg text-xs font-semibold active:scale-[.98] transition-all"
+                className="w-full mt-3 py-2 bg-surface border border-surface-4 text-ink-4 rounded-lg text-xs font-semibold active:scale-[.98] transition-all"
               >
                 🔑 Ingia kutoa tathmini
               </button>
@@ -645,7 +662,7 @@ export default function PropertyDetail() {
         )}
       </div>
 
-      {/* STICKY CTA - FIXED POSITION ABOVE BOTTOM NAV */}
+      {/* STICKY CTA */}
       <div 
         className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg"
         style={{ 
