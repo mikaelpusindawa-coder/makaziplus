@@ -20,7 +20,7 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
     return (
       <div onClick={() => navigate(`/property/${p.id}`)}
         className="card-hover flex bg-white rounded-2xl overflow-hidden shadow-soft
-          border border-surface-4 cursor-pointer mb-2.5 mx-4 md:mx-0 w-full"
+          border border-surface-4 cursor-pointer mb-2.5 mx-4 md:mx-0"
       >
         <div className="relative w-28 md:w-36 flex-shrink-0 overflow-hidden bg-surface-3">
           <img src={img} alt={p.title} loading="lazy"
@@ -77,13 +77,13 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
     );
   }
 
-  // Standard card - FIXED: removed fixed width, now responsive
+  // Standard card - optimized for grid layout
   return (
     <div onClick={() => navigate(`/property/${p.id}`)}
       className="card-hover bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4
-        cursor-pointer w-full h-full flex flex-col"
+        cursor-pointer h-full flex flex-col"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-surface-3 flex-shrink-0">
+      <div className="relative aspect-square md:aspect-[4/3] overflow-hidden bg-surface-3">
         <img src={img} alt={p.title} loading="lazy"
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
@@ -110,7 +110,7 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
             <HeartIcon filled={isFav} />
           </button>
         )}
-        <div className="absolute bottom-2 right-2 bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize">
+        <div className="absolute bottom-2 left-2 bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize">
           {p.type}
         </div>
       </div>
