@@ -265,7 +265,7 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Featured Grid */}
+        {/* Featured Grid - Maintained 2 columns on mobile, 4 columns on desktop */}
         {featured.length > 0 && (
           <div className="w-full">
             <div className="flex items-center justify-between mb-3">
@@ -303,20 +303,20 @@ export default function Home() {
           </div>
         )}
 
-        {/* All Properties Matrix Grid */}
+        {/* All Properties Matrix Grid - UPGRADED to grid-cols-1 on Mobile for perfect horizontal rhythm, scaling up beautifully to md:grid-cols-4 on desktop */}
         <div className="w-full">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm md:text-base font-bold text-ink">Mali Zote 🏠</h2>
             <button onClick={() => navigate('/search')} className="text-2xs font-bold text-primary hover:underline">Zaidi →</button>
           </div>
           {loadingN ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
               {[1, 2, 3, 4].map(i => <SkeletonListCard key={i} />)}
             </div>
           ) : (
             <>
               {newest.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
                   {newest.map(p => (
                     <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                   ))}
