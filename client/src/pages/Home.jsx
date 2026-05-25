@@ -124,7 +124,7 @@ const HeroSlider = ({ properties, loading }) => {
 
   return (
     <div
-      className="relative mx-3 mt-3 md:mx-0 md:mt-0 rounded-3xl md:rounded-none overflow-hidden cursor-pointer group"
+      className="relative w-full overflow-hidden cursor-pointer group"
       style={{ height: 'clamp(200px, 35vw, 420px)' }}
       onMouseEnter={() => setHeroPaused(true)}
       onMouseLeave={() => setHeroPaused(false)}
@@ -195,7 +195,7 @@ const RecentMarquee = ({ items }) => {
   const doubled = [...items, ...items];
 
   return (
-    <div className="overflow-hidden relative">
+    <div className="overflow-hidden relative w-full">
       <div className="flex gap-3 animate-marquee" style={{ width: 'max-content' }}>
         {doubled.map((p, i) => (
           <div key={`${p.id}-${i}`} onClick={() => navigate(`/property/${p.id}`)}
@@ -319,7 +319,8 @@ export default function Home() {
       <TopBar />
       <HeroSlider properties={heroWithImages} loading={loadingHero} />
 
-      <div className="flex justify-around px-4 py-4 max-w-7xl mx-auto">
+      {/* Stats - Full width */}
+      <div className="flex justify-around px-4 py-4 w-full">
         {STATS.map(s => (
           <div key={s.label} className="text-center">
             <div className="text-xl md:text-2xl font-serif font-semibold text-primary">{s.value}</div>
@@ -328,7 +329,8 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 max-w-7xl mx-auto">
+      {/* Filters - Full width with scroll on mobile */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 w-full">
         {FILTERS.map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
@@ -338,9 +340,9 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Featured Properties - Responsive Grid with better spacing */}
+      {/* Featured Properties - Full width grid */}
       {featured.length > 0 && (
-        <div className="mt-4 max-w-7xl mx-auto px-4">
+        <div className="mt-4 w-full px-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-ink flex items-center gap-2">
               Featured <span className="text-gold">⭐</span>
@@ -350,8 +352,8 @@ export default function Home() {
             </button>
           </div>
           {loadingF ? (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:overflow-visible">
-              {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:overflow-visible">
+              {[1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
             </div>
           ) : (
             <>
@@ -361,8 +363,8 @@ export default function Home() {
                   <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                 ))}
               </div>
-              {/* Desktop: Grid layout with even spacing */}
-              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {/* Desktop: Responsive grid that fills full width */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 w-full">
                 {featured.map(p => (
                   <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                 ))}
@@ -372,9 +374,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* Newest Properties Marquee */}
+      {/* Newest Properties Marquee - Full width */}
       {marqueeItems.length > 0 && (
-        <div className="mt-6 max-w-7xl mx-auto px-4">
+        <div className="mt-6 w-full px-4">
           <div className="flex items-center justify-between mb-2.5">
             <h2 className="text-base font-bold text-ink flex items-center gap-2">
               🆕 Mpya Zaidi <span className="text-green-500 text-sm animate-pulse-soft">● Live</span>
@@ -385,28 +387,28 @@ export default function Home() {
         </div>
       )}
 
-      {/* All Properties - Responsive Grid with better spacing */}
-      <div className="mt-5 max-w-7xl mx-auto px-4">
+      {/* All Properties - Full width responsive grid */}
+      <div className="mt-5 w-full px-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
           <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline">Zaidi →</button>
         </div>
         {loadingN ? (
-          <div className="space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:space-y-0">
-            {[1, 2, 3, 4].map(i => <SkeletonListCard key={i} />)}
+          <div className="space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:space-y-0">
+            {[1, 2, 3, 4, 5].map(i => <SkeletonListCard key={i} />)}
           </div>
         ) : (
           <>
             {newest.length > 0 ? (
               <>
-                {/* Mobile: Vertical stack with horizontal cards */}
+                {/* Mobile: Vertical stack */}
                 <div className="space-y-2 md:hidden">
                   {newest.map(p => (
                     <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
                   ))}
                 </div>
-                {/* Desktop: Grid with standard cards, better spacing */}
-                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {/* Desktop: Responsive grid that fills full width */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 w-full">
                   {newest.map(p => (
                     <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                   ))}
@@ -424,8 +426,9 @@ export default function Home() {
         )}
       </div>
 
+      {/* CTA Section - Full width */}
       {!user && (
-        <div className="mx-4 mt-6 mb-4 max-w-7xl mx-auto bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
+        <div className="mx-4 mt-6 mb-4 bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
           <h3 className="font-serif text-xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
           <p className="text-white/70 text-sm mb-4">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
           <button onClick={() => navigate('/auth')} className="bg-white text-primary px-6 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift">
