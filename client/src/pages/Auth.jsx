@@ -74,17 +74,15 @@ export default function Auth() {
       console.log('🔑 Auth.jsx: After login, returnUrl =', returnUrl);
       
       if (returnUrl && returnUrl !== '/auth' && returnUrl !== '/login') {
-        // Redirect back to the original page
-        console.log('🔑 Auth.jsx: Redirecting to:', returnUrl);
-        navigate(returnUrl);
+        // Force a full page redirect to ensure clean state
+        console.log('🔑 Auth.jsx: Force redirecting to:', returnUrl);
+        window.location.href = returnUrl;
       } else {
-        // Fallback to home page
         console.log('🔑 Auth.jsx: No valid return URL, going home');
-        navigate('/');
+        window.location.href = '/';
       }
     } catch (err) {
       toast(err.response?.data?.message || err.message, 'error');
-    } finally {
       setLoading(false);
     }
   };
@@ -119,14 +117,14 @@ export default function Auth() {
       console.log('🔑 Auth.jsx: After register, returnUrl =', returnUrl);
       
       if (returnUrl && returnUrl !== '/auth' && returnUrl !== '/login') {
-        console.log('🔑 Auth.jsx: Redirecting to:', returnUrl);
-        navigate(returnUrl);
+        // Force a full page redirect to ensure clean state
+        console.log('🔑 Auth.jsx: Force redirecting to:', returnUrl);
+        window.location.href = returnUrl;
       } else {
-        navigate('/');
+        window.location.href = '/';
       }
     } catch (err) {
       toast(err.response?.data?.message || err.message, 'error');
-    } finally {
       setLoading(false);
     }
   };
