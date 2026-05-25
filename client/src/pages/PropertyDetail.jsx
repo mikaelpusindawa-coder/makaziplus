@@ -164,7 +164,6 @@ export default function PropertyDetail() {
     const { intent, data } = savedIntent;
     console.log('🎯 Executing saved intent:', intent, data);
     
-    // Mark as executed immediately
     setIntentExecuted(true);
     
     switch (intent) {
@@ -397,7 +396,7 @@ export default function PropertyDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-surface pb-28 md:pb-10 animate-fade-in">
+    <div className="min-h-screen bg-surface pb-32 md:pb-10 animate-fade-in">
 
       {/* HERO IMAGE */}
       <div className="relative overflow-hidden bg-surface-3" style={{ height: 'clamp(260px, 46vw, 500px)' }}>
@@ -436,7 +435,6 @@ export default function PropertyDetail() {
         </div>
         <div className="absolute bottom-3 left-3 flex gap-2 z-10">
           {p.is_premium === 1 && <div className="badge badge-gold shadow-gold">⭐ Premium</div>}
-          <div className={`badge ${propStatus.color}`}>{propStatus.icon} {propStatus.label}</div>
           {p.owner_verified && <div className="badge bg-blue-50 text-blue-700">✓ Verified Owner</div>}
         </div>
         {allImages.length > 1 && (
@@ -463,32 +461,33 @@ export default function PropertyDetail() {
         </div>
       )}
 
-      {/* BODY - rest of the component remains the same */}
-      <div className="px-4 pt-5 md:max-w-3xl md:mx-auto">
+      {/* BODY */}
+      <div className="px-4 pt-5 md:max-w-3xl md:mx-auto pb-24">
+
         {/* Price + Title + Time uploaded */}
         <div className="mb-4">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="flex-1 min-w-0">
-              <div className="font-serif text-3xl md:text-4xl font-semibold text-primary">
+              <div className="font-serif text-2xl md:text-3xl font-semibold text-primary">
                 {formatPrice(p.price)}
-                <span className="font-sans text-sm font-normal text-ink-5 ml-2">
+                <span className="font-sans text-xs font-normal text-ink-5 ml-1">
                   {p.price_type === 'rent' ? '/mwezi' : '-- bei ya mwisho'}
                 </span>
               </div>
-              <h1 className="text-xl font-bold text-ink mt-1.5 leading-snug">{p.title}</h1>
-              <div className="flex items-center gap-3 mt-2 flex-wrap">
-                <p className="text-sm text-ink-5 flex items-center gap-1">
+              <h1 className="text-lg md:text-xl font-bold text-ink mt-1 leading-snug">{p.title}</h1>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <p className="text-xs text-ink-5 flex items-center gap-0.5">
                   <span className="text-primary">📍</span>{p.area}, {p.city}
                 </p>
-                <span className="text-ink-6 text-xs">•</span>
-                <p className="text-xs text-ink-5 flex items-center gap-1">
+                <span className="text-ink-6 text-2xs">•</span>
+                <p className="text-2xs text-ink-5 flex items-center gap-0.5">
                   <span>🕐</span> Imechapishwa {daysSinceUpload}
                 </p>
                 {p.latitude && p.longitude && (
                   <>
-                    <span className="text-ink-6 text-xs">•</span>
-                    <button onClick={openGoogleMaps} className="text-xs text-primary hover:underline flex items-center gap-1">
-                      <span>🗺️</span> Tazama Ramani
+                    <span className="text-ink-6 text-2xs">•</span>
+                    <button onClick={openGoogleMaps} className="text-2xs text-primary hover:underline flex items-center gap-0.5">
+                      <span>🗺️</span> Ramani
                     </button>
                   </>
                 )}
@@ -497,61 +496,73 @@ export default function PropertyDetail() {
             {(isOwnProperty || user?.role === 'admin') && (
               <button
                 onClick={() => navigate(`/add?edit=${p.id}`)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-primary-50 text-primary rounded-xl text-xs font-bold
-                  hover:bg-primary hover:text-white active:scale-95 transition-all shadow-soft flex-shrink-0">
-                ✏️ Hariri Mali
+                className="flex items-center gap-1 px-2 py-1.5 bg-primary-50 text-primary rounded-lg text-xs font-bold
+                  hover:bg-primary hover:text-white active:scale-95 transition-all flex-shrink-0">
+                ✏️ Hariri
               </button>
             )}
           </div>
         </div>
 
         {/* Stats grid */}
-        <div className={`grid gap-2 mb-5 ${[p.bedrooms > 0, p.bathrooms > 0, p.size_sqm > 0, true].filter(Boolean).length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-          {[
-            p.bedrooms > 0 && { v: p.bedrooms, l: 'Vyumba', i: '🛏' },
-            p.bathrooms > 0 && { v: p.bathrooms, l: 'Bafuni', i: '🚿' },
-            p.size_sqm > 0 && { v: p.size_sqm, l: 'm²', i: '📐' },
-            { v: p.views, l: 'Maoni', i: '👁' },
-          ].filter(Boolean).map(({ v, l, i }) => (
-            <div key={l} className="bg-white rounded-2xl py-3 text-center shadow-soft border border-surface-4">
-              <div className="text-lg mb-0.5">{i}</div>
-              <div className="text-base font-extrabold text-ink">{v}</div>
-              <div className="text-2xs text-ink-5 font-medium">{l}</div>
+        <div className="grid grid-cols-4 gap-2 mb-5">
+          {p.bedrooms > 0 && (
+            <div className="bg-white rounded-xl py-2 text-center shadow-soft border border-surface-4">
+              <div className="text-base mb-0.5">🛏</div>
+              <div className="text-sm font-extrabold text-ink">{p.bedrooms}</div>
+              <div className="text-2xs text-ink-5 font-medium">Vyumba</div>
             </div>
-          ))}
+          )}
+          {p.bathrooms > 0 && (
+            <div className="bg-white rounded-xl py-2 text-center shadow-soft border border-surface-4">
+              <div className="text-base mb-0.5">🚿</div>
+              <div className="text-sm font-extrabold text-ink">{p.bathrooms}</div>
+              <div className="text-2xs text-ink-5 font-medium">Bafu</div>
+            </div>
+          )}
+          {p.size_sqm > 0 && (
+            <div className="bg-white rounded-xl py-2 text-center shadow-soft border border-surface-4">
+              <div className="text-base mb-0.5">📐</div>
+              <div className="text-sm font-extrabold text-ink">{p.size_sqm}</div>
+              <div className="text-2xs text-ink-5 font-medium">m²</div>
+            </div>
+          )}
+          <div className="bg-white rounded-xl py-2 text-center shadow-soft border border-surface-4">
+            <div className="text-base mb-0.5">👁</div>
+            <div className="text-sm font-extrabold text-ink">{p.views}</div>
+            <div className="text-2xs text-ink-5 font-medium">Maoni</div>
+          </div>
         </div>
 
         {/* Description */}
         <div className="mb-5">
-          <h2 className="text-base font-bold text-ink mb-2">Kuhusu Mali Hii</h2>
-          <p className="text-sm leading-relaxed text-ink-4">{p.description}</p>
+          <h2 className="text-sm font-bold text-ink mb-2">Kuhusu Mali Hii</h2>
+          <p className="text-xs leading-relaxed text-ink-4">{p.description}</p>
         </div>
 
         {/* Amenities */}
         {p.amenities?.length > 0 && (
           <div className="mb-5">
-            <h2 className="text-base font-bold text-ink mb-3">✅ Huduma Zilizopo</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {p.amenities.map(a => (
-                <div key={a} className="flex items-center gap-2 bg-primary-50 rounded-xl px-3 py-2.5 border border-primary/10">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 stroke-primary flex-shrink-0" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span className="text-xs font-semibold text-primary-600">{a}</span>
-                </div>
+            <h2 className="text-sm font-bold text-ink mb-2">✅ Huduma Zilizopo</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {p.amenities.slice(0, 8).map(a => (
+                <span key={a} className="badge badge-primary text-2xs">{a}</span>
               ))}
+              {p.amenities.length > 8 && (
+                <span className="badge bg-surface text-ink-4 text-2xs">+{p.amenities.length - 8}</span>
+              )}
             </div>
           </div>
         )}
 
         {/* ─── MAP SECTION ─── */}
         <div className="mb-5">
-          <h2 className="text-base font-bold text-ink mb-3">🗺️ Mahali pa Mali</h2>
-          <Suspense fallback={<div className="h-60 bg-surface-3 rounded-2xl animate-pulse"/>}>
-            <PropertyMap lat={p.latitude} lng={p.longitude} title={p.title} height="240px"/>
+          <h2 className="text-sm font-bold text-ink mb-2">🗺️ Mahali pa Mali</h2>
+          <Suspense fallback={<div className="h-48 bg-surface-3 rounded-xl animate-pulse"/>}>
+            <PropertyMap lat={p.latitude} lng={p.longitude} title={p.title} height="200px"/>
           </Suspense>
           {(p.latitude && p.longitude) && (
-            <button onClick={openGoogleMaps} className="mt-2 text-xs text-primary hover:underline flex items-center gap-1">
+            <button onClick={openGoogleMaps} className="mt-2 text-2xs text-primary hover:underline flex items-center gap-1">
               📍 Fungua Google Maps →
             </button>
           )}
@@ -560,8 +571,8 @@ export default function PropertyDetail() {
         {/* ─── VIDEO SECTION ─── */}
         {p.video_url && (
           <div className="mb-5">
-            <h2 className="text-base font-bold text-ink mb-3">🎬 Video ya Mali</h2>
-            <div className="bg-black rounded-2xl overflow-hidden shadow-soft">
+            <h2 className="text-sm font-bold text-ink mb-2">🎬 Video ya Mali</h2>
+            <div className="bg-black rounded-xl overflow-hidden shadow-soft">
               {(p.video_url.includes('youtube.com') || p.video_url.includes('youtu.be') || p.video_url.includes('vimeo.com')) ? (
                 <iframe
                   src={
@@ -572,7 +583,7 @@ export default function PropertyDetail() {
                         : p.video_url
                   }
                   title="Property Video"
-                  className="w-full h-64 md:h-96"
+                  className="w-full h-48 md:h-64"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -581,7 +592,7 @@ export default function PropertyDetail() {
                 <video
                   src={resolveImageUrl(p.video_url, 'videos') || p.video_url}
                   controls
-                  className="w-full h-64 md:h-96 object-contain"
+                  className="w-full h-48 md:h-64 object-contain"
                 />
               )}
             </div>
@@ -590,44 +601,38 @@ export default function PropertyDetail() {
 
         {/* OWNER CARD */}
         <div className="mb-5">
-          <h2 className="text-base font-bold text-ink mb-3">Wasiliana Na</h2>
-          <div className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4">
+          <h2 className="text-sm font-bold text-ink mb-2">Wasiliana Na</h2>
+          <div className="bg-white rounded-xl p-3 shadow-soft border border-surface-4">
             <div className="flex items-start gap-3">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 bg-primary-50">
+              <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-primary-50">
                 <img src={ownerImg} alt={p.owner_name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-ink flex items-center gap-2 flex-wrap">
+                <div className="font-bold text-sm text-ink flex items-center gap-1.5 flex-wrap">
                   {p.owner_name}
                   {p.owner_verified && <span className="badge badge-primary text-2xs">✓ Amethibitishwa</span>}
                   {p.owner_plan === 'pro' && <span className="badge badge-gold text-2xs">⭐ Pro</span>}
                 </div>
-                <div className="text-xs text-ink-5 mt-0.5">
-                  {p.owner_role === 'agent' ? '🧑‍💼 Dalali Aliyethibitishwa' : '🏠 Mwenye Nyumba'}
+                <div className="text-2xs text-ink-5 mt-0.5">
+                  {p.owner_role === 'agent' ? '🧑‍💼 Dalali' : '🏠 Mwenye Nyumba'}
                 </div>
-
                 {/* Owner rating stars */}
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  {renderStars(Math.round(ownerRating || 0), 'sm')}
-                  <span className="text-xs font-semibold text-ink-4">
+                <div className="flex items-center gap-1 mt-1">
+                  {renderStars(Math.round(ownerRating || 0), 'xs')}
+                  <span className="text-2xs font-semibold text-ink-4">
                     {ownerRating ? parseFloat(ownerRating).toFixed(1) : '--'}
                   </span>
-                  <span className="text-xs text-ink-6">({ownerReviews.length || 0} tathmini)</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 mt-1">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-2xs text-green-600 font-medium">Anapatikana sasa</span>
+                  <span className="text-2xs text-ink-6">({ownerReviews.length || 0})</span>
                 </div>
               </div>
-              <div className="flex flex-col gap-2 flex-shrink-0">
+              <div className="flex flex-col gap-1.5 flex-shrink-0">
                 <button onClick={openChat}
-                  className="flex items-center gap-1.5 bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold active:scale-95 transition-all shadow-green hover:shadow-green-lg"
+                  className="flex items-center gap-1 bg-primary text-white px-3 py-1.5 rounded-lg text-2xs font-bold active:scale-95 transition-all shadow-green"
                 >
                   💬 Chat
                 </button>
                 <button onClick={handleCall}
-                  className="w-full py-2.5 bg-white border-2 border-primary text-primary rounded-xl text-sm font-bold active:scale-95 transition-all text-center"
+                  className="flex items-center gap-1 bg-white border border-primary text-primary px-3 py-1.5 rounded-lg text-2xs font-bold active:scale-95 transition-all"
                 >
                   📞 Piga
                 </button>
@@ -637,39 +642,37 @@ export default function PropertyDetail() {
             {/* Rate button */}
             {user && !isOwnProperty && (
               <button onClick={() => setShowRatingModal(true)}
-                className="w-full mt-3 py-2.5 border-2 border-gold bg-gold-50 text-gold-600 rounded-xl text-sm font-bold active:scale-[.98] transition-all flex items-center justify-center gap-2 hover:bg-gold-100"
+                className="w-full mt-2 py-2 border border-gold bg-gold-50 text-gold-600 rounded-lg text-xs font-bold active:scale-[.98] transition-all flex items-center justify-center gap-1"
               >
-                ⭐ Kadiria {p.owner_role === 'agent' ? 'Dalali' : 'Mwenye Nyumba'} Huyu
+                ⭐ Kadiria {p.owner_role === 'agent' ? 'Dalali' : 'Mwenye Nyumba'}
               </button>
             )}
 
             {/* Owner reviews preview */}
             {ownerReviews.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-surface-4">
-                <p className="text-xs font-semibold text-ink-4 mb-2">Maoni ya hivi karibuni:</p>
-                {ownerReviews.slice(0, 2).map(r => (
-                  <div key={r.id} className="text-xs text-ink-5 mb-2">
-                    <div className="flex items-center gap-1">{renderStars(r.rating, 'xs')}</div>
-                    <p className="italic line-clamp-2">"{r.review}"</p>
-                    <p className="text-2xs text-ink-6">--- {r.rater_name}</p>
+              <div className="mt-2 pt-2 border-t border-surface-4">
+                <p className="text-2xs font-semibold text-ink-4 mb-1">Maoni:</p>
+                {ownerReviews.slice(0, 1).map(r => (
+                  <div key={r.id} className="text-2xs text-ink-5">
+                    <div className="flex items-center gap-0.5">{renderStars(r.rating, 'xs')}</div>
+                    <p className="italic line-clamp-1">"{r.review?.substring(0, 50)}"</p>
                   </div>
                 ))}
               </div>
             )}
 
             {user && isOwnProperty && (
-              <div className="mt-3 text-center text-xs text-blue-600 bg-blue-50 py-2 rounded-xl">
-                ℹ️ Hii ni tangazo lako. Unaweza kulihariri.
+              <div className="mt-2 text-center text-2xs text-blue-600 bg-blue-50 py-1.5 rounded-lg">
+                ℹ️ Tangazo lako
               </div>
             )}
 
             {!user && (
               <button onClick={() => {
-                console.log('💾 Guest rating button: Saving intent');
                 saveIntent('rating', { ownerId: p.owner_id, ownerName: p.owner_name });
                 setLoginPrompt({ open: true, action: 'kutoa tathmini', intent: 'rating' });
               }}
-                className="w-full mt-3 py-2.5 bg-surface border-2 border-surface-4 text-ink-4 rounded-xl text-sm font-semibold active:scale-[.98] transition-all"
+                className="w-full mt-2 py-2 bg-surface border border-surface-4 text-ink-4 rounded-lg text-xs font-semibold active:scale-[.98] transition-all"
               >
                 🔑 Ingia kutoa tathmini
               </button>
@@ -680,88 +683,65 @@ export default function PropertyDetail() {
         {/* PROPERTY REVIEWS */}
         {p.reviews?.length > 0 && (
           <div className="mb-5">
-            <h2 className="text-base font-bold text-ink mb-3">⭐ Maoni ya Wateja kwenye Mali</h2>
-            <div className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-3">
-              <div className="flex items-center gap-4">
+            <h2 className="text-sm font-bold text-ink mb-2">⭐ Maoni ya Wateja</h2>
+            <div className="bg-white rounded-xl p-3 shadow-soft border border-surface-4">
+              <div className="flex items-center gap-3">
                 <div className="text-center">
-                  <div className="font-serif text-5xl font-semibold text-primary">
+                  <div className="font-serif text-2xl font-semibold text-primary">
                     {p.avg_rating ? parseFloat(p.avg_rating).toFixed(1) : '--'}
                   </div>
-                  <div className="mt-1">{renderStars(Math.round(p.avg_rating || 0), 'md')}</div>
-                  <div className="text-2xs text-ink-5 mt-1">{p.review_count} maoni</div>
+                  <div className="mt-0.5">{renderStars(Math.round(p.avg_rating || 0), 'xs')}</div>
+                  <div className="text-2xs text-ink-5 mt-0.5">{p.review_count} maoni</div>
                 </div>
-                <div className="flex-1 space-y-1.5">
+                <div className="flex-1">
                   {[5, 4, 3, 2, 1].map(n => {
                     const cnt = p.reviews.filter(r => r.rating === n).length;
                     const pct = p.reviews.length ? Math.round(cnt / p.reviews.length * 100) : 0;
                     return (
-                      <div key={n} className="flex items-center gap-2">
-                        <span className="text-2xs text-ink-5 w-2.5 text-right">{n}</span>
-                        <div className="flex-1 h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                          <div className="h-full bg-yellow-400 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                      <div key={n} className="flex items-center gap-1 text-2xs">
+                        <span className="text-ink-5 w-2">{n}</span>
+                        <div className="flex-1 h-1 bg-surface-3 rounded-full overflow-hidden">
+                          <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-2xs text-ink-6 w-5 text-right">{cnt}</span>
+                        <span className="text-ink-6 w-3 text-right">{cnt}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
             </div>
-            {p.reviews.slice(0, 4).map(r => (
-              <div key={r.id} className="bg-white rounded-2xl p-4 shadow-soft border border-surface-4 mb-2">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-primary-50 flex-shrink-0">
-                    <img src={getAvatar({ avatar: r.reviewer_avatar })} alt=""
-                      className="w-full h-full object-cover"
-                      onError={e => { e.target.style.display = 'none'; }}
-                    />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-ink">{r.reviewer_name}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">{renderStars(r.rating, 'sm')}</div>
-                  </div>
-                </div>
-                {r.comment && <p className="text-sm text-ink-4 leading-relaxed italic">"{r.comment}"</p>}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Edit button for owner */}
-        {isOwnProperty && (
-          <div className="mb-5">
-            <button onClick={() => navigate(`/add?edit=${p.id}`)}
-              className="w-full py-3 border-2 border-primary text-primary rounded-2xl font-bold text-sm active:scale-[.98] transition-all hover:bg-primary-50"
-            >
-              ✏️ Hariri Tangazo Hili
-            </button>
           </div>
         )}
       </div>
 
-      {/* STICKY CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
-        <div className="glass border-t border-black/[0.07] px-4 py-3 flex gap-3 max-w-lg mx-auto md:max-w-3xl">
+      {/* STICKY CTA - FIXED FOR MOBILE VISIBILITY */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+        <div className="px-3 py-2 flex gap-2 max-w-lg mx-auto md:max-w-3xl">
           <button onClick={openChat}
-            className="flex-1 py-4 bg-primary text-white rounded-2xl font-bold text-sm active:scale-[.98] transition-all shadow-green hover:shadow-green-lg hover:bg-primary-light flex items-center justify-center gap-2"
+            className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
           >
-            💬 Wasiliana Sasa
+            <span>💬</span> <span className="hidden sm:inline">Wasiliana</span>
           </button>
           <button
             onClick={openBookingModal}
-            className="flex-1 py-4 bg-gold text-white rounded-2xl font-bold text-sm active:scale-[.98] transition-all shadow-gold flex items-center justify-center gap-2 hover:bg-gold-dark"
+            className="flex-1 py-3 bg-gold text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
           >
-            📅 Book Now
+            <span>📅</span> <span className="hidden sm:inline">Book Now</span>
           </button>
           <button onClick={toggleFav}
-            className={`w-14 py-4 border-2 rounded-2xl font-bold text-base flex items-center justify-center active:scale-[.98] transition-all ${isFav ? 'border-red-400 bg-red-50 text-red-500' : 'border-surface-4 bg-white text-ink-5 hover:border-primary'}`}
+            className={`w-12 py-3 rounded-xl font-bold text-base flex items-center justify-center active:scale-95 transition-all shadow-md ${
+              isFav 
+                ? 'bg-red-500 text-white border-0' 
+                : 'bg-white border-2 border-gray-300 text-gray-500'
+            }`}
           >
             {isFav ? '❤️' : '🤍'}
           </button>
         </div>
       </div>
 
-      {/* RATING MODAL */}
+      {/* MODALS */}
       <RatingModal
         isOpen={showRatingModal}
         onClose={() => setShowRatingModal(false)}
@@ -775,7 +755,6 @@ export default function PropertyDetail() {
         submitting={submittingRating}
       />
 
-      {/* BOOKING MODAL */}
       <BookingModal
         isOpen={showBookingModal}
         onClose={() => setShowBookingModal(false)}
