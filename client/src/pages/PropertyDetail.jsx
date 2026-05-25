@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner, PaymentModal } from '../components/common/Spinner';
@@ -10,9 +10,40 @@ import { formatPrice, getAvatar, daysAgo, renderStars, STATUS_LABELS, resolveIma
 import api from '../utils/api';
 const PropertyMap = lazy(() => import('../components/common/PropertyMap'));
 
+// Intent keys for localStorage
+const INTENT_KEY = 'makaziplus_intent';
+
+// Save intent to localStorage before redirecting to login
+const saveIntent = (intent, data) => {
+  localStorage.setItem(INTENT_KEY, JSON.stringify({ intent, data, timestamp: Date.now() }));
+};
+
+// Clear intent after execution
+const clearIntent = () => {
+  localStorage.removeItem(INTENT_KEY);
+};
+
+// Get saved intent
+const getSavedIntent = () => {
+  const saved = localStorage.getItem(INTENT_KEY);
+  if (!saved) return null;
+  try {
+    const intent = JSON.parse(saved);
+    // Expire after 5 minutes
+    if (Date.now() - intent.timestamp > 5 * 60 * 1000) {
+      clearIntent();
+      return null;
+    }
+    return intent;
+  } catch {
+    return null;
+  }
+};
+
 export default function PropertyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -44,33 +75,72 @@ export default function PropertyDetail() {
   const [ownerReviews, setOwnerReviews] = useState([]);
 
   // Guest login prompt
-  const [loginPrompt, setLoginPrompt] = useState({ open: false, action: '' });
-  const requireAuth = (action, fn) => {
-    if (!user) { setLoginPrompt({ open: true, action }); return; }
-    fn();
+  const [loginPrompt, setLoginPrompt] = useState({ open: false, action: '', intent: null });
+
+  // Check for saved intent after login
+  useEffect(() => {
+    if (!user) return;
+    
+    const savedIntent = getSavedIntent();
+    if (!savedIntent) return;
+    
+    // Clear the intent immediately to prevent re-execution
+    clearIntent();
+    
+    const { intent, data } = savedIntent;
+    
+    // Execute the saved intent
+    switch (intent) {
+      case 'rating':
+        if (data.ownerId === property?.owner_id) {
+          setShowRatingModal(true);
+          toast('Tathmini yako iko tayari. Weka nyota zako! ⭐', 'info');
+        }
+        break;
+      case 'booking':
+        if (data.propertyId === parseInt(id)) {
+          setShowBookingModal(true);
+          toast('Kamilisha booking yako kwa kuchagua tarehe 📅', 'info');
+        }
+        break;
+      case 'chat':
+        if (data.ownerId === property?.owner_id) {
+          navigate(`/chat?userId=${data.ownerId}`);
+        }
+        break;
+      case 'favorite':
+        if (data.propertyId === parseInt(id)) {
+          // Auto-toggle favorite
+          toggleFavAfterLogin();
+        }
+        break;
+      default:
+        break;
+    }
+  }, [user, property, id, navigate, toast]);
+
+  const loadProperty = async () => {
+    try {
+      const r = await api.get(`/properties/${id}`);
+      setProperty(r.data.data);
+      const imgs = r.data.data.images || [];
+      if (imgs.length) {
+        setMainImg(resolveImageUrl(imgs[0].image_url) || '');
+      }
+      if (user) {
+        const fav = await api.get(`/favorites/${id}/check`);
+        setIsFav(fav.data.favorited);
+      }
+    } catch (err) {
+      console.error('Load property error:', err);
+      navigate('/');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const r = await api.get(`/properties/${id}`);
-        setProperty(r.data.data);
-        const imgs = r.data.data.images || [];
-        if (imgs.length) {
-          setMainImg(resolveImageUrl(imgs[0].image_url) || '');
-        }
-        if (user) {
-          const fav = await api.get(`/favorites/${id}/check`);
-          setIsFav(fav.data.favorited);
-        }
-      } catch (err) {
-        console.error('Load property error:', err);
-        navigate('/');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadProperty();
   }, [id, user, navigate]);
 
   // Load owner ratings
@@ -89,7 +159,22 @@ export default function PropertyDetail() {
   }, [property?.owner_id]);
 
   const toggleFav = async () => {
-    if (!user) { setLoginPrompt({ open: true, action: 'kuhifadhi mali' }); return; }
+    if (!user) {
+      saveIntent('favorite', { propertyId: parseInt(id) });
+      setLoginPrompt({ open: true, action: 'kuhifadhi mali', intent: 'favorite' });
+      return;
+    }
+    try {
+      const r = await api.post(`/favorites/${id}/toggle`);
+      setIsFav(r.data.favorited);
+      toast(r.data.message, 'success');
+    } catch (err) {
+      console.error('Toggle fav error:', err);
+      toast('Hitilafu ya mtandao', 'error');
+    }
+  };
+
+  const toggleFavAfterLogin = async () => {
     try {
       const r = await api.post(`/favorites/${id}/toggle`);
       setIsFav(r.data.favorited);
@@ -101,12 +186,20 @@ export default function PropertyDetail() {
   };
 
   const openChat = () => {
-    if (!user) { setLoginPrompt({ open: true, action: 'kuwasiliana na dalali/mwenye nyumba' }); return; }
+    if (!user) {
+      saveIntent('chat', { ownerId: property?.owner_id, ownerName: property?.owner_name });
+      setLoginPrompt({ open: true, action: 'kuwasiliana na dalali/mwenye nyumba', intent: 'chat' });
+      return;
+    }
     navigate(`/chat?userId=${property.owner_id}`);
   };
 
   const handleSubmitRating = async () => {
-    if (!user) { setLoginPrompt({ open: true, action: 'kutoa tathmini' }); return; }
+    if (!user) {
+      saveIntent('rating', { ownerId: property?.owner_id, ownerName: property?.owner_name });
+      setLoginPrompt({ open: true, action: 'kutoa tathmini', intent: 'rating' });
+      return;
+    }
     if (!starValue) { toast('Chagua rating ya nyota', 'error'); return; }
 
     setSubmittingRating(true);
@@ -132,8 +225,21 @@ export default function PropertyDetail() {
     }
   };
 
+  const openBookingModal = () => {
+    if (!user) {
+      saveIntent('booking', { propertyId: parseInt(id), propertyTitle: property?.title });
+      setLoginPrompt({ open: true, action: 'kuweka booking', intent: 'booking' });
+      return;
+    }
+    setShowBookingModal(true);
+  };
+
   const handleBooking = async () => {
-    if (!user) { setLoginPrompt({ open: true, action: 'kuweka booking' }); return; }
+    if (!user) {
+      saveIntent('booking', { propertyId: parseInt(id), propertyTitle: property?.title });
+      setLoginPrompt({ open: true, action: 'kuweka booking', intent: 'booking' });
+      return;
+    }
     if (!bookingDetails.check_in || !bookingDetails.check_out) {
       toast('Chagua tarehe za kuingia na kutoka', 'error');
       return;
@@ -479,7 +585,10 @@ export default function PropertyDetail() {
             )}
 
             {!user && (
-              <button onClick={() => setLoginPrompt({ open: true, action: 'kutoa tathmini' })}
+              <button onClick={() => {
+                saveIntent('rating', { ownerId: p.owner_id, ownerName: p.owner_name });
+                setLoginPrompt({ open: true, action: 'kutoa tathmini', intent: 'rating' });
+              }}
                 className="w-full mt-3 py-2.5 bg-surface border-2 border-surface-4 text-ink-4 rounded-xl text-sm font-semibold active:scale-[.98] transition-all"
               >
                 🔑 Ingia kutoa tathmini
@@ -559,7 +668,7 @@ export default function PropertyDetail() {
             💬 Wasiliana Sasa
           </button>
           <button
-            onClick={() => requireAuth('kuweka booking', () => setShowBookingModal(true))}
+            onClick={openBookingModal}
             className="flex-1 py-4 bg-gold text-white rounded-2xl font-bold text-sm active:scale-[.98] transition-all shadow-gold flex items-center justify-center gap-2 hover:bg-gold-dark"
           >
             📅 Book Now
@@ -618,7 +727,7 @@ export default function PropertyDetail() {
 
       <LoginPromptModal
         isOpen={loginPrompt.open}
-        onClose={() => setLoginPrompt({ open: false, action: '' })}
+        onClose={() => setLoginPrompt({ open: false, action: '', intent: null })}
         action={loginPrompt.action}
       />
     </div>
