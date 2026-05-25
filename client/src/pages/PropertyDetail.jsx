@@ -16,27 +16,33 @@ const RETURN_URL_KEY = 'makaziplus_return_url';
 
 // Save intent to localStorage before redirecting to login
 const saveIntent = (intent, data) => {
+  console.log('💾 saveIntent: Saving intent:', intent, data);
   localStorage.setItem(INTENT_KEY, JSON.stringify({ intent, data, timestamp: Date.now() }));
 };
 
 // Clear intent after execution
 const clearIntent = () => {
+  console.log('🗑️ clearIntent: Removing saved intent');
   localStorage.removeItem(INTENT_KEY);
 };
 
 // Get saved intent
 const getSavedIntent = () => {
   const saved = localStorage.getItem(INTENT_KEY);
+  console.log('📦 getSavedIntent: Raw saved data:', saved);
   if (!saved) return null;
   try {
     const intent = JSON.parse(saved);
-    // Expire after 10 minutes (increased from 5)
+    console.log('📦 getSavedIntent: Parsed intent:', intent);
+    // Expire after 10 minutes
     if (Date.now() - intent.timestamp > 10 * 60 * 1000) {
+      console.log('📦 getSavedIntent: Intent expired, clearing');
       clearIntent();
       return null;
     }
     return intent;
-  } catch {
+  } catch (e) {
+    console.error('📦 getSavedIntent: Parse error:', e);
     return null;
   }
 };
@@ -44,6 +50,7 @@ const getSavedIntent = () => {
 // Get return URL
 const getReturnUrl = () => {
   const url = localStorage.getItem(RETURN_URL_KEY);
+  console.log('🔙 getReturnUrl: Retrieved URL:', url);
   localStorage.removeItem(RETURN_URL_KEY);
   return url;
 };
@@ -89,11 +96,11 @@ export default function PropertyDetail() {
   // Check for return URL after login - redirect back to property page
   useEffect(() => {
     const returnUrl = getReturnUrl();
+    console.log('🔙 Return URL check:', returnUrl);
     if (returnUrl && returnUrl.includes(`/property/${id}`)) {
-      // Already on the right page, no need to redirect
-      console.log('Already on property page, will execute intent');
+      console.log('🔙 Already on property page, will execute intent');
     } else if (returnUrl && returnUrl.includes('/property/')) {
-      // Extract property ID from return URL and navigate
+      console.log('🔙 Navigating to return URL:', returnUrl);
       const match = returnUrl.match(/\/property\/(\d+)/);
       if (match && match[1] !== id) {
         navigate(returnUrl);
@@ -104,53 +111,71 @@ export default function PropertyDetail() {
 
   // Check for saved intent AFTER property is loaded
   useEffect(() => {
+    console.log('🔍 Intent check: user=', !!user, 'property=', !!property, 'intentExecuted=', intentExecuted);
+    
     if (!user || !property || intentExecuted) return;
     
     const savedIntent = getSavedIntent();
+    console.log('🔍 Intent check: savedIntent=', savedIntent);
+    
     if (!savedIntent) return;
     
     const { intent, data } = savedIntent;
-    console.log('Executing saved intent:', intent, data);
+    console.log('🎯 Executing saved intent:', intent, data);
+    console.log('🎯 Current property ID:', id, 'Owner ID:', property.owner_id);
     
     switch (intent) {
       case 'rating':
         if (data.ownerId === property.owner_id) {
+          console.log('✅ Opening rating modal');
           setShowRatingModal(true);
           toast('Tathmini yako iko tayari. Weka nyota zako! ⭐', 'info');
           setIntentExecuted(true);
           clearIntent();
+        } else {
+          console.log('❌ Owner ID mismatch:', data.ownerId, 'vs', property.owner_id);
         }
         break;
       case 'booking':
         if (data.propertyId === parseInt(id)) {
+          console.log('✅ Opening booking modal');
           setShowBookingModal(true);
           toast('Kamilisha booking yako kwa kuchagua tarehe 📅', 'info');
           setIntentExecuted(true);
           clearIntent();
+        } else {
+          console.log('❌ Property ID mismatch:', data.propertyId, 'vs', id);
         }
         break;
       case 'chat':
         if (data.ownerId === property.owner_id) {
+          console.log('✅ Opening chat');
           navigate(`/chat?userId=${data.ownerId}`);
           setIntentExecuted(true);
           clearIntent();
+        } else {
+          console.log('❌ Owner ID mismatch for chat:', data.ownerId, 'vs', property.owner_id);
         }
         break;
       case 'favorite':
         if (data.propertyId === parseInt(id)) {
-          // Auto-toggle favorite
+          console.log('✅ Toggling favorite');
           toggleFavAfterLogin();
           setIntentExecuted(true);
           clearIntent();
+        } else {
+          console.log('❌ Property ID mismatch for favorite:', data.propertyId, 'vs', id);
         }
         break;
       default:
+        console.log('❌ Unknown intent:', intent);
         break;
     }
   }, [user, property, id, navigate, toast, intentExecuted]);
 
   const loadProperty = async () => {
     try {
+      console.log('📡 Loading property ID:', id);
       const r = await api.get(`/properties/${id}`);
       setProperty(r.data.data);
       const imgs = r.data.data.images || [];
@@ -195,6 +220,7 @@ export default function PropertyDetail() {
 
   const toggleFav = async () => {
     if (!user) {
+      console.log('💾 Guest favorite: Saving intent');
       saveIntent('favorite', { propertyId: parseInt(id) });
       setLoginPrompt({ open: true, action: 'kuhifadhi mali', intent: 'favorite' });
       return;
@@ -222,6 +248,7 @@ export default function PropertyDetail() {
 
   const openChat = () => {
     if (!user) {
+      console.log('💾 Guest chat: Saving intent');
       saveIntent('chat', { ownerId: property?.owner_id, ownerName: property?.owner_name });
       setLoginPrompt({ open: true, action: 'kuwasiliana na dalali/mwenye nyumba', intent: 'chat' });
       return;
@@ -231,6 +258,7 @@ export default function PropertyDetail() {
 
   const handleSubmitRating = async () => {
     if (!user) {
+      console.log('💾 Guest rating: Saving intent');
       saveIntent('rating', { ownerId: property?.owner_id, ownerName: property?.owner_name });
       setLoginPrompt({ open: true, action: 'kutoa tathmini', intent: 'rating' });
       return;
@@ -249,7 +277,6 @@ export default function PropertyDetail() {
       setStarValue(0);
       setReviewText('');
 
-      // Refresh owner ratings
       const r = await api.get(`/ratings/user/${property.owner_id}`);
       setOwnerRating(r.data.avg_rating);
       setOwnerReviews(r.data.data || []);
@@ -262,6 +289,7 @@ export default function PropertyDetail() {
 
   const openBookingModal = () => {
     if (!user) {
+      console.log('💾 Guest booking: Saving intent');
       saveIntent('booking', { propertyId: parseInt(id), propertyTitle: property?.title });
       setLoginPrompt({ open: true, action: 'kuweka booking', intent: 'booking' });
       return;
@@ -621,6 +649,7 @@ export default function PropertyDetail() {
 
             {!user && (
               <button onClick={() => {
+                console.log('💾 Guest rating button: Saving intent');
                 saveIntent('rating', { ownerId: p.owner_id, ownerName: p.owner_name });
                 setLoginPrompt({ open: true, action: 'kutoa tathmini', intent: 'rating' });
               }}
