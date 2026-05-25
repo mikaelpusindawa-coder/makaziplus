@@ -12,6 +12,7 @@ const PropertyMap = lazy(() => import('../components/common/PropertyMap'));
 
 // Intent keys for localStorage
 const INTENT_KEY = 'makaziplus_intent';
+const RETURN_URL_KEY = 'makaziplus_return_url';
 
 // Save intent to localStorage before redirecting to login
 const saveIntent = (intent, data) => {
@@ -29,8 +30,8 @@ const getSavedIntent = () => {
   if (!saved) return null;
   try {
     const intent = JSON.parse(saved);
-    // Expire after 5 minutes
-    if (Date.now() - intent.timestamp > 5 * 60 * 1000) {
+    // Expire after 10 minutes (increased from 5)
+    if (Date.now() - intent.timestamp > 10 * 60 * 1000) {
       clearIntent();
       return null;
     }
@@ -38,6 +39,13 @@ const getSavedIntent = () => {
   } catch {
     return null;
   }
+};
+
+// Get return URL
+const getReturnUrl = () => {
+  const url = localStorage.getItem(RETURN_URL_KEY);
+  localStorage.removeItem(RETURN_URL_KEY);
+  return url;
 };
 
 export default function PropertyDetail() {
@@ -53,6 +61,7 @@ export default function PropertyDetail() {
   const [mainImg, setMainImg] = useState('');
   const [imgIdx, setImgIdx] = useState(0);
   const [payOpen, setPayOpen] = useState(false);
+  const [intentExecuted, setIntentExecuted] = useState(false);
 
   // Rating modal states
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -77,47 +86,68 @@ export default function PropertyDetail() {
   // Guest login prompt
   const [loginPrompt, setLoginPrompt] = useState({ open: false, action: '', intent: null });
 
-  // Check for saved intent after login
+  // Check for return URL after login - redirect back to property page
   useEffect(() => {
-    if (!user) return;
+    const returnUrl = getReturnUrl();
+    if (returnUrl && returnUrl.includes(`/property/${id}`)) {
+      // Already on the right page, no need to redirect
+      console.log('Already on property page, will execute intent');
+    } else if (returnUrl && returnUrl.includes('/property/')) {
+      // Extract property ID from return URL and navigate
+      const match = returnUrl.match(/\/property\/(\d+)/);
+      if (match && match[1] !== id) {
+        navigate(returnUrl);
+        return;
+      }
+    }
+  }, [id, navigate]);
+
+  // Check for saved intent AFTER property is loaded
+  useEffect(() => {
+    if (!user || !property || intentExecuted) return;
     
     const savedIntent = getSavedIntent();
     if (!savedIntent) return;
     
-    // Clear the intent immediately to prevent re-execution
-    clearIntent();
-    
     const { intent, data } = savedIntent;
+    console.log('Executing saved intent:', intent, data);
     
-    // Execute the saved intent
     switch (intent) {
       case 'rating':
-        if (data.ownerId === property?.owner_id) {
+        if (data.ownerId === property.owner_id) {
           setShowRatingModal(true);
           toast('Tathmini yako iko tayari. Weka nyota zako! ⭐', 'info');
+          setIntentExecuted(true);
+          clearIntent();
         }
         break;
       case 'booking':
         if (data.propertyId === parseInt(id)) {
           setShowBookingModal(true);
           toast('Kamilisha booking yako kwa kuchagua tarehe 📅', 'info');
+          setIntentExecuted(true);
+          clearIntent();
         }
         break;
       case 'chat':
-        if (data.ownerId === property?.owner_id) {
+        if (data.ownerId === property.owner_id) {
           navigate(`/chat?userId=${data.ownerId}`);
+          setIntentExecuted(true);
+          clearIntent();
         }
         break;
       case 'favorite':
         if (data.propertyId === parseInt(id)) {
           // Auto-toggle favorite
           toggleFavAfterLogin();
+          setIntentExecuted(true);
+          clearIntent();
         }
         break;
       default:
         break;
     }
-  }, [user, property, id, navigate, toast]);
+  }, [user, property, id, navigate, toast, intentExecuted]);
 
   const loadProperty = async () => {
     try {
@@ -142,6 +172,11 @@ export default function PropertyDetail() {
   useEffect(() => {
     loadProperty();
   }, [id, user, navigate]);
+
+  // Reset intent executed flag when property changes
+  useEffect(() => {
+    setIntentExecuted(false);
+  }, [id]);
 
   // Load owner ratings
   useEffect(() => {
@@ -729,6 +764,7 @@ export default function PropertyDetail() {
         isOpen={loginPrompt.open}
         onClose={() => setLoginPrompt({ open: false, action: '', intent: null })}
         action={loginPrompt.action}
+        returnUrl={window.location.pathname + window.location.search}
       />
     </div>
   );
