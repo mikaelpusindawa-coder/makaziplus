@@ -1,13 +1,21 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export const LoginPromptModal = ({ isOpen, onClose, action = 'kufanya hivi' }) => {
+// Key for storing return URL
+const RETURN_URL_KEY = 'makaziplus_return_url';
+
+export const LoginPromptModal = ({ isOpen, onClose, action = 'kufanya hivi', returnUrl = null }) => {
   const navigate = useNavigate();
 
   if (!isOpen) return null;
 
   const handleLogin = () => {
     onClose();
+    
+    // Save the current URL to return after login
+    const urlToReturn = returnUrl || window.location.pathname + window.location.search;
+    localStorage.setItem(RETURN_URL_KEY, urlToReturn);
+    
     navigate('/auth');
   };
 
