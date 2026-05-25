@@ -14,7 +14,17 @@ export const LoginPromptModal = ({ isOpen, onClose, action = 'kufanya hivi', ret
     
     // Save the current URL to return after login
     const urlToReturn = returnUrl || window.location.pathname + window.location.search;
+    
+    // DEBUG: Log what is being saved
+    console.log('🔐 LoginPromptModal: Saving return URL:', urlToReturn);
+    console.log('🔐 LoginPromptModal: returnUrl prop:', returnUrl);
+    console.log('🔐 LoginPromptModal: window.location:', window.location.pathname + window.location.search);
+    
     localStorage.setItem(RETURN_URL_KEY, urlToReturn);
+    
+    // Also verify it was saved
+    const saved = localStorage.getItem(RETURN_URL_KEY);
+    console.log('🔐 LoginPromptModal: Verified saved URL:', saved);
     
     navigate('/auth');
   };
