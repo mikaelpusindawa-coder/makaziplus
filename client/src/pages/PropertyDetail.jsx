@@ -16,32 +16,26 @@ const RETURN_URL_KEY = 'makaziplus_return_url';
 
 // Save intent to localStorage before redirecting to login
 const saveIntent = (intent, data) => {
-  console.log('💾 saveIntent: Saving intent:', intent, data);
   localStorage.setItem(INTENT_KEY, JSON.stringify({ intent, data, timestamp: Date.now() }));
 };
 
 // Clear intent after execution
 const clearIntent = () => {
-  console.log('🗑️ clearIntent: Removing saved intent');
   localStorage.removeItem(INTENT_KEY);
 };
 
-// Get saved intent (does NOT clear it)
+// Get saved intent
 const getSavedIntent = () => {
   const saved = localStorage.getItem(INTENT_KEY);
-  console.log('📦 getSavedIntent: Raw saved data:', saved);
   if (!saved) return null;
   try {
     const intent = JSON.parse(saved);
-    console.log('📦 getSavedIntent: Parsed intent:', intent);
     if (Date.now() - intent.timestamp > 10 * 60 * 1000) {
-      console.log('📦 getSavedIntent: Intent expired, clearing');
       clearIntent();
       return null;
     }
     return intent;
-  } catch (e) {
-    console.error('📦 getSavedIntent: Parse error:', e);
+  } catch {
     return null;
   }
 };
@@ -49,7 +43,6 @@ const getSavedIntent = () => {
 // Get return URL
 const getReturnUrl = () => {
   const url = localStorage.getItem(RETURN_URL_KEY);
-  console.log('🔙 getReturnUrl: Retrieved URL:', url);
   localStorage.removeItem(RETURN_URL_KEY);
   return url;
 };
@@ -57,13 +50,11 @@ const getReturnUrl = () => {
 export default function PropertyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
 
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isFav, setIsFav] = useState(false);
   const [mainImg, setMainImg] = useState('');
   const [imgIdx, setImgIdx] = useState(0);
@@ -93,15 +84,12 @@ export default function PropertyDetail() {
   // Guest login prompt
   const [loginPrompt, setLoginPrompt] = useState({ open: false, action: '', intent: null });
 
-  // Check for return URL after login - redirect back to property page
+  // Check for return URL after login
   useEffect(() => {
     const returnUrl = getReturnUrl();
-    console.log('🔙 Return URL check:', returnUrl);
-    
     if (returnUrl && returnUrl.includes(`/property/${id}`)) {
-      console.log('🔙 Already on property page, will execute intent');
+      console.log('Already on property page, will execute intent');
     } else if (returnUrl && returnUrl.includes('/property/')) {
-      console.log('🔙 Navigating to return URL:', returnUrl);
       const match = returnUrl.match(/\/property\/(\d+)/);
       if (match && match[1] !== id) {
         navigate(returnUrl, { replace: true });
@@ -110,30 +98,20 @@ export default function PropertyDetail() {
     }
   }, [id, navigate]);
 
-  // Load property data
   const loadProperty = async () => {
     try {
-      console.log('📡 Loading property ID:', id);
-      setLoading(true);
-      setError(null);
-      
       const r = await api.get(`/properties/${id}`);
-      console.log('📡 Property data received:', r.data.data);
       setProperty(r.data.data);
-      
       const imgs = r.data.data.images || [];
       if (imgs.length) {
         setMainImg(resolveImageUrl(imgs[0].image_url) || '');
       }
-      
       if (user) {
         const fav = await api.get(`/favorites/${id}/check`);
         setIsFav(fav.data.favorited);
       }
     } catch (err) {
       console.error('Load property error:', err);
-      setError('Mali haipatikani');
-      toast('Mali haipatikani', 'error');
       navigate('/');
     } finally {
       setLoading(false);
@@ -144,70 +122,52 @@ export default function PropertyDetail() {
     loadProperty();
   }, [id, user]);
 
-  // Reset intent executed flag when property changes
   useEffect(() => {
-    console.log('🔄 Resetting for property ID:', id);
     setIntentExecuted(false);
   }, [id]);
 
-  // Check for saved intent AFTER property is loaded AND user is logged in
+  // Check for saved intent AFTER property is loaded
   useEffect(() => {
-    console.log('🔍 Intent check: user=', !!user, 'property=', !!property, 'intentExecuted=', intentExecuted);
-    
     if (!user || !property || intentExecuted) return;
     
     const savedIntent = getSavedIntent();
-    console.log('🔍 Intent check: savedIntent=', savedIntent);
-    
     if (!savedIntent) return;
     
     const { intent, data } = savedIntent;
-    console.log('🎯 Executing saved intent:', intent, data);
-    
     setIntentExecuted(true);
     
     switch (intent) {
       case 'rating':
-        console.log('✅ Opening rating modal');
-        setShowRatingModal(true);
-        toast('Tathmini yako iko tayari. Weka nyota zako! ⭐', 'info');
-        clearIntent();
+        if (data.ownerId === property.owner_id) {
+          setShowRatingModal(true);
+          toast('Tathmini yako iko tayari. Weka nyota zako! ⭐', 'info');
+          clearIntent();
+        }
         break;
       case 'booking':
         if (data.propertyId === parseInt(id)) {
-          console.log('✅ Opening booking modal');
           setShowBookingModal(true);
           toast('Kamilisha booking yako kwa kuchagua tarehe 📅', 'info');
           clearIntent();
-        } else {
-          console.log('❌ Property ID mismatch');
         }
         break;
       case 'chat':
         if (data.ownerId === property.owner_id) {
-          console.log('✅ Opening chat');
           clearIntent();
           navigate(`/chat?userId=${data.ownerId}`);
-        } else {
-          console.log('❌ Owner ID mismatch');
         }
         break;
       case 'favorite':
         if (data.propertyId === parseInt(id)) {
-          console.log('✅ Toggling favorite');
           clearIntent();
           toggleFavAfterLogin();
-        } else {
-          console.log('❌ Property ID mismatch');
         }
         break;
       default:
-        console.log('❌ Unknown intent:', intent);
         break;
     }
   }, [user, property, id, navigate, toast, intentExecuted]);
 
-  // Load owner ratings
   useEffect(() => {
     if (!property?.owner_id) return;
     const loadOwnerRatings = async () => {
@@ -224,7 +184,6 @@ export default function PropertyDetail() {
 
   const toggleFav = async () => {
     if (!user) {
-      console.log('💾 Guest favorite: Saving intent');
       saveIntent('favorite', { propertyId: parseInt(id) });
       setLoginPrompt({ open: true, action: 'kuhifadhi mali', intent: 'favorite' });
       return;
@@ -234,7 +193,6 @@ export default function PropertyDetail() {
       setIsFav(r.data.favorited);
       toast(r.data.message, 'success');
     } catch (err) {
-      console.error('Toggle fav error:', err);
       toast('Hitilafu ya mtandao', 'error');
     }
   };
@@ -245,15 +203,13 @@ export default function PropertyDetail() {
       setIsFav(r.data.favorited);
       toast(r.data.message, 'success');
     } catch (err) {
-      console.error('Toggle fav error:', err);
       toast('Hitilafu ya mtandao', 'error');
     }
   };
 
   const openChat = () => {
     if (!user) {
-      console.log('💾 Guest chat: Saving intent');
-      saveIntent('chat', { ownerId: property?.owner_id, ownerName: property?.owner_name });
+      saveIntent('chat', { ownerId: property?.owner_id });
       setLoginPrompt({ open: true, action: 'kuwasiliana na dalali/mwenye nyumba', intent: 'chat' });
       return;
     }
@@ -262,8 +218,7 @@ export default function PropertyDetail() {
 
   const handleSubmitRating = async () => {
     if (!user) {
-      console.log('💾 Guest rating: Saving intent');
-      saveIntent('rating', { ownerId: property?.owner_id, ownerName: property?.owner_name });
+      saveIntent('rating', { ownerId: property?.owner_id });
       setLoginPrompt({ open: true, action: 'kutoa tathmini', intent: 'rating' });
       return;
     }
@@ -293,8 +248,7 @@ export default function PropertyDetail() {
 
   const openBookingModal = () => {
     if (!user) {
-      console.log('💾 Guest booking: Saving intent');
-      saveIntent('booking', { propertyId: parseInt(id), propertyTitle: property?.title });
+      saveIntent('booking', { propertyId: parseInt(id) });
       setLoginPrompt({ open: true, action: 'kuweka booking', intent: 'booking' });
       return;
     }
@@ -303,7 +257,7 @@ export default function PropertyDetail() {
 
   const handleBooking = async () => {
     if (!user) {
-      saveIntent('booking', { propertyId: parseInt(id), propertyTitle: property?.title });
+      saveIntent('booking', { propertyId: parseInt(id) });
       setLoginPrompt({ open: true, action: 'kuweka booking', intent: 'booking' });
       return;
     }
@@ -367,18 +321,6 @@ export default function PropertyDetail() {
     </div>
   );
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-surface">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🏠</div>
-          <p className="text-ink-5">{error}</p>
-          <button onClick={() => navigate('/')} className="btn-primary mt-4">Rudi Nyumbani</button>
-        </div>
-      </div>
-    );
-  }
-
   if (!property) return null;
 
   const p = property;
@@ -395,8 +337,11 @@ export default function PropertyDetail() {
     setImgIdx(idx);
   };
 
+  // Determine if we should show sticky CTA (only for guests)
+  const showStickyCTA = !user;
+
   return (
-    <div className="min-h-screen bg-surface pb-32 md:pb-10 animate-fade-in">
+    <div className="min-h-screen bg-surface pb-24 md:pb-10 animate-fade-in">
 
       {/* HERO IMAGE */}
       <div className="relative overflow-hidden bg-surface-3" style={{ height: 'clamp(260px, 46vw, 500px)' }}>
@@ -435,6 +380,7 @@ export default function PropertyDetail() {
         </div>
         <div className="absolute bottom-3 left-3 flex gap-2 z-10">
           {p.is_premium === 1 && <div className="badge badge-gold shadow-gold">⭐ Premium</div>}
+          <div className={`badge ${propStatus.color}`}>{propStatus.icon} {propStatus.label}</div>
           {p.owner_verified && <div className="badge bg-blue-50 text-blue-700">✓ Verified Owner</div>}
         </div>
         {allImages.length > 1 && (
@@ -555,7 +501,7 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        {/* ─── MAP SECTION ─── */}
+        {/* MAP SECTION */}
         <div className="mb-5">
           <h2 className="text-sm font-bold text-ink mb-2">🗺️ Mahali pa Mali</h2>
           <Suspense fallback={<div className="h-48 bg-surface-3 rounded-xl animate-pulse"/>}>
@@ -568,7 +514,7 @@ export default function PropertyDetail() {
           )}
         </div>
 
-        {/* ─── VIDEO SECTION ─── */}
+        {/* VIDEO SECTION */}
         {p.video_url && (
           <div className="mb-5">
             <h2 className="text-sm font-bold text-ink mb-2">🎬 Video ya Mali</h2>
@@ -616,7 +562,6 @@ export default function PropertyDetail() {
                 <div className="text-2xs text-ink-5 mt-0.5">
                   {p.owner_role === 'agent' ? '🧑‍💼 Dalali' : '🏠 Mwenye Nyumba'}
                 </div>
-                {/* Owner rating stars */}
                 <div className="flex items-center gap-1 mt-1">
                   {renderStars(Math.round(ownerRating || 0), 'xs')}
                   <span className="text-2xs font-semibold text-ink-4">
@@ -646,19 +591,6 @@ export default function PropertyDetail() {
               >
                 ⭐ Kadiria {p.owner_role === 'agent' ? 'Dalali' : 'Mwenye Nyumba'}
               </button>
-            )}
-
-            {/* Owner reviews preview */}
-            {ownerReviews.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-surface-4">
-                <p className="text-2xs font-semibold text-ink-4 mb-1">Maoni:</p>
-                {ownerReviews.slice(0, 1).map(r => (
-                  <div key={r.id} className="text-2xs text-ink-5">
-                    <div className="flex items-center gap-0.5">{renderStars(r.rating, 'xs')}</div>
-                    <p className="italic line-clamp-1">"{r.review?.substring(0, 50)}"</p>
-                  </div>
-                ))}
-              </div>
             )}
 
             {user && isOwnProperty && (
@@ -714,32 +646,34 @@ export default function PropertyDetail() {
         )}
       </div>
 
-      {/* STICKY CTA - FIXED FOR MOBILE VISIBILITY */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg"
-        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
-        <div className="px-3 py-2 flex gap-2 max-w-lg mx-auto md:max-w-3xl">
-          <button onClick={openChat}
-            className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
-          >
-            <span>💬</span> <span className="hidden sm:inline">Wasiliana</span>
-          </button>
-          <button
-            onClick={openBookingModal}
-            className="flex-1 py-3 bg-gold text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
-          >
-            <span>📅</span> <span className="hidden sm:inline">Book Now</span>
-          </button>
-          <button onClick={toggleFav}
-            className={`w-12 py-3 rounded-xl font-bold text-base flex items-center justify-center active:scale-95 transition-all shadow-md ${
-              isFav 
-                ? 'bg-red-500 text-white border-0' 
-                : 'bg-white border-2 border-gray-300 text-gray-500'
-            }`}
-          >
-            {isFav ? '❤️' : '🤍'}
-          </button>
+      {/* STICKY CTA - ONLY FOR GUESTS (not logged in) */}
+      {showStickyCTA && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg"
+          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+          <div className="px-3 py-2 flex gap-2 max-w-lg mx-auto md:max-w-3xl">
+            <button onClick={openChat}
+              className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
+            >
+              💬 <span className="hidden sm:inline">Wasiliana</span>
+            </button>
+            <button
+              onClick={openBookingModal}
+              className="flex-1 py-3 bg-gold text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
+            >
+              📅 <span className="hidden sm:inline">Book Now</span>
+            </button>
+            <button onClick={toggleFav}
+              className={`w-12 py-3 rounded-xl font-bold text-base flex items-center justify-center active:scale-95 transition-all shadow-md ${
+                isFav 
+                  ? 'bg-red-500 text-white border-0' 
+                  : 'bg-white border-2 border-gray-300 text-gray-500'
+              }`}
+            >
+              {isFav ? '❤️' : '🤍'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* MODALS */}
       <RatingModal
