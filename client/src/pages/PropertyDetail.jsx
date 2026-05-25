@@ -331,17 +331,16 @@ export default function PropertyDetail() {
   const daysSinceUpload = daysAgo(p.created_at);
   const today = new Date().toISOString().split('T')[0];
   const minCheckOut = bookingDetails.check_in || today;
-
   const switchImg = (url, idx) => {
     setMainImg(resolveImageUrl(url) || '');
     setImgIdx(idx);
   };
 
-  // Calculate bottom padding based on whether user is logged in (BottomNav height ~60px)
-  const bottomPadding = user ? 'pb-28' : 'pb-24';
+  // BottomNav height is ~60px, add extra padding when user is logged in
+  const bottomPaddingClass = user ? 'pb-32' : 'pb-24';
 
   return (
-    <div className={`min-h-screen bg-surface ${bottomPadding} md:pb-10 animate-fade-in`}>
+    <div className={`min-h-screen bg-surface ${bottomPaddingClass} md:pb-10 animate-fade-in`}>
 
       {/* HERO IMAGE */}
       <div className="relative overflow-hidden bg-surface-3" style={{ height: 'clamp(260px, 46vw, 500px)' }}>
@@ -646,29 +645,36 @@ export default function PropertyDetail() {
         )}
       </div>
 
-      {/* STICKY CTA - ALWAYS VISIBLE, ADJUSTED FOR BOTTOM NAV */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg"
-        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      {/* STICKY CTA - FIXED POSITION ABOVE BOTTOM NAV */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg"
+        style={{ 
+          paddingBottom: user ? 'calc(60px + env(safe-area-inset-bottom, 0px))' : 'max(12px, env(safe-area-inset-bottom, 0px))',
+          transform: 'translateZ(0)'
+        }}
+      >
         <div className="px-3 py-2 flex gap-2 max-w-lg mx-auto md:max-w-3xl">
           <button onClick={openChat}
-            className="flex-1 py-3 bg-primary text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
           >
-            <span>💬</span> <span className="hidden sm:inline">Wasiliana</span>
+            <span className="text-base">💬</span>
+            <span className="text-xs sm:text-sm">Wasiliana</span>
           </button>
           <button
             onClick={openBookingModal}
-            className="flex-1 py-3 bg-gold text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 bg-gold text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
           >
-            <span>📅</span> <span className="hidden sm:inline">Book Now</span>
+            <span className="text-base">📅</span>
+            <span className="text-xs sm:text-sm">Book</span>
           </button>
           <button onClick={toggleFav}
-            className={`w-12 py-3 rounded-xl font-bold text-base flex items-center justify-center active:scale-95 transition-all shadow-md ${
+            className={`w-14 py-2.5 rounded-xl font-bold text-base flex items-center justify-center gap-1 active:scale-95 transition-all shadow-md ${
               isFav 
                 ? 'bg-red-500 text-white border-0' 
                 : 'bg-white border-2 border-gray-300 text-gray-500'
             }`}
           >
-            {isFav ? '❤️' : '🤍'}
+            <span>{isFav ? '❤️' : '🤍'}</span>
           </button>
         </div>
       </div>
