@@ -95,7 +95,7 @@ const HeroSlider = ({ properties, loading }) => {
   if (loading) {
     return (
       <div className="relative mx-3 mt-3 md:mx-0 md:mt-0 rounded-3xl md:rounded-none overflow-hidden bg-surface-3"
-        style={{ height: 'clamp(200px, 35vw, 420px)' }}>
+        style={{ height: 'clamp(280px, 45vw, 520px)' }}>
         <div className="w-full h-full skeleton" />
       </div>
     );
@@ -124,8 +124,8 @@ const HeroSlider = ({ properties, loading }) => {
 
   return (
     <div
-      className="relative w-full overflow-hidden cursor-pointer group"
-      style={{ height: 'clamp(200px, 35vw, 420px)' }}
+      className="relative w-full overflow-hidden cursor-pointer group md:rounded-2xl shadow-soft"
+      style={{ height: 'clamp(280px, 45vw, 520px)' }}
       onMouseEnter={() => setHeroPaused(true)}
       onMouseLeave={() => setHeroPaused(false)}
       onTouchStart={handleTouchStart}
@@ -145,37 +145,37 @@ const HeroSlider = ({ properties, loading }) => {
           ⭐ Premium Listing
         </div>
       )}
-      <div className="absolute inset-0 p-5 md:p-10 flex flex-col justify-end z-10">
+      <div className="absolute inset-0 p-5 md:p-12 flex flex-col justify-end z-10">
         <div className="animate-fade-in-up">
-          <p className="text-white/80 text-sm font-medium mb-1">
+          <p className="text-white/80 text-sm md:text-base font-medium mb-1">
             {current.isFallback ? 'Karibu MakaziPlus' : `📍 ${current.area || ''}, ${current.city || ''}`}
           </p>
-          <h2 className="font-serif text-xl md:text-3xl lg:text-4xl font-semibold text-white leading-tight text-balance">
+          <h2 className="font-serif text-2xl md:text-4xl lg:text-5xl font-semibold text-white leading-tight text-balance max-w-4xl">
             {current.title}
           </h2>
           {!current.isFallback && (
-            <div className="mt-3 flex items-center gap-3">
-              <span className="font-serif text-xl md:text-2xl font-bold text-gold-light">
+            <div className="mt-4 flex items-center gap-3">
+              <span className="font-serif text-2xl md:text-3xl font-bold text-gold-light">
                 {formatPrice(current.price)}
               </span>
-              <span className="text-white/60 text-sm">{current.price_type === 'rent' ? '/mwezi' : ''}</span>
+              <span className="text-white/60 text-sm md:text-base">{current.price_type === 'rent' ? '/mwezi' : ''}</span>
             </div>
           )}
         </div>
       </div>
       <button onClick={(e) => { e.stopPropagation(); prevSlide(); }}
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-        <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 md:h-5 stroke-white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
         </svg>
       </button>
       <button onClick={(e) => { e.stopPropagation(); nextSlide(); }}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-        <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 md:h-5 stroke-white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6" />
         </svg>
       </button>
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
+      <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-2 z-10">
         {displayItems.map((_, idx) => (
           <button key={idx} onClick={(e) => { e.stopPropagation(); goToSlide(idx); }}
             className={`transition-all duration-300 rounded-full ${currentIndex === idx ? 'w-8 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/60'}`} />
@@ -196,22 +196,22 @@ const RecentMarquee = ({ items }) => {
 
   return (
     <div className="overflow-hidden relative w-full rounded-2xl">
-      <div className="flex gap-3 animate-marquee" style={{ width: 'max-content' }}>
+      <div className="flex gap-4 animate-marquee" style={{ width: 'max-content' }}>
         {doubled.map((p, i) => (
           <div key={`${p.id}-${i}`} onClick={() => navigate(`/property/${p.id}`)}
-            className="flex-shrink-0 w-44 bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4 cursor-pointer hover:shadow-card transition-all hover:-translate-y-1">
-            <div className="h-24 relative overflow-hidden bg-surface-3">
+            className="flex-shrink-0 w-52 bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4 cursor-pointer hover:shadow-card transition-all hover:-translate-y-1">
+            <div className="h-28 relative overflow-hidden bg-surface-3">
               <img src={getPropertyImage(p)} alt={p.title} className="w-full h-full object-cover" loading="lazy"
                 onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }} />
               <div className="absolute bottom-1.5 left-1.5 bg-black/50 backdrop-blur-sm text-white text-2xs font-bold px-1.5 py-0.5 rounded-full">
                 🆕 {timeAgo(p.created_at)}
               </div>
             </div>
-            <div className="p-2.5">
-              <p className="text-xs font-bold text-primary line-clamp-1">
+            <div className="p-3">
+              <p className="text-sm font-bold text-primary line-clamp-1">
                 {formatPrice(p.price)} {p.price_type === 'rent' ? '/mwezi' : ''}
               </p>
-              <p className="text-2xs text-ink-4 mt-0.5 line-clamp-1">{p.area}, {p.city}</p>
+              <p className="text-xs text-ink-4 mt-0.5 line-clamp-1">{p.area}, {p.city}</p>
             </div>
           </div>
         ))}
@@ -315,59 +315,62 @@ export default function Home() {
   const marqueeItems = newestWithImages.length > 0 ? newestWithImages : newest;
 
   return (
-    <div className="min-h-screen bg-surface pb-24 md:pb-8 page-enter w-full">
+    <div className="min-h-screen bg-surface pb-24 md:pb-12 page-enter w-full">
       <TopBar />
-      <HeroSlider properties={heroWithImages} loading={loadingHero} />
-
-      {/* Main Content Layout Wrapper for Centralizing Desktop Viewports */}
-      <div className="max-w-7xl mx-auto w-full px-4">
+      
+      {/* Widescreen Application Wrapper - Widen to 1600px max layout container */}
+      <div className="max-w-[1600px] mx-auto w-full px-4 md:px-8 lg:px-12 mt-4 space-y-8">
         
-        {/* Stats */}
-        <div className="flex justify-around py-6 w-full border-b border-surface-4 sm:border-0">
+        <HeroSlider properties={heroWithImages} loading={loadingHero} />
+
+        {/* Stats Section */}
+        <div className="bg-white rounded-2xl p-6 shadow-soft flex justify-around w-full border border-surface-4">
           {STATS.map(s => (
             <div key={s.label} className="text-center">
-              <div className="text-xl md:text-2xl font-serif font-semibold text-primary">{s.value}</div>
-              <div className="text-2xs text-ink-5 mt-0.5 hidden sm:block">{s.label}</div>
+              <div className="text-2xl md:text-3xl font-serif font-semibold text-primary">{s.value}</div>
+              <div className="text-xs text-ink-5 mt-1 hidden sm:block font-medium">{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar py-3 w-full">
+        {/* Filters Scrollable Strip */}
+        <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-2 w-full">
           {FILTERS.map(f => (
             <button key={f.id} onClick={() => setFilter(f.id)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
-                ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
+              className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap shadow-soft
+                ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 hover:bg-surface-3 hover:text-ink'}`}>
               <span>{f.icon}</span> {f.label}
             </button>
           ))}
         </div>
 
-        {/* Featured Properties Section */}
+        {/* Featured Properties Row Grid */}
         {featured.length > 0 && (
-          <div className="mt-6 w-full">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+          <div className="w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl md:text-2xl font-bold text-ink flex items-center gap-2">
                 Featured <span className="text-gold">⭐</span>
               </h2>
-              <button onClick={() => navigate('/search?premium=1')} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+              <button onClick={() => navigate('/search?premium=1')} className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
                 Ona Zote <span>→</span>
               </button>
             </div>
             {loadingF ? (
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:overflow-visible">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
                 {[1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
               </div>
             ) : (
               <>
-                {/* Mobile: Horizontal slider */}
-                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:hidden">
+                {/* Mobile: Scroll strip */}
+                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-3 md:hidden">
                   {featured.map(p => (
-                    <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                    <div key={p.id} className="w-64 flex-shrink-0">
+                      <PropertyCard property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                    </div>
                   ))}
                 </div>
-                {/* Desktop: Centered and responsive full-width column layout spaces */}
-                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 w-full">
+                {/* Desktop Grid stretching out beautifully across full width layout panels */}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6 w-full">
                   {featured.map(p => (
                     <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                   ))}
@@ -377,50 +380,50 @@ export default function Home() {
           </div>
         )}
 
-        {/* Newest Properties Marquee */}
+        {/* Newest Live Properties Marquee */}
         {marqueeItems.length > 0 && (
-          <div className="mt-8 w-full">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                🆕 Mpya Zaidi <span className="text-green-500 text-sm animate-pulse-soft">● Live</span>
+          <div className="w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg md:text-xl font-bold text-ink flex items-center gap-2">
+                🆕 Mpya Zaidi <span className="text-green-500 text-xs md:text-sm animate-pulse-soft font-semibold">● Live</span>
               </h2>
-              <button onClick={() => navigate('/search')} className="text-xs font-medium text-primary hover:underline">Zaidi →</button>
+              <button onClick={() => navigate('/search')} className="text-xs md:text-sm font-semibold text-primary hover:underline">Zaidi →</button>
             </div>
             <RecentMarquee items={marqueeItems} />
           </div>
         )}
 
-        {/* All Properties Section */}
-        <div className="mt-8 w-full">
+        {/* All Properties Grid View */}
+        <div className="w-full">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
-            <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline">Zaidi →</button>
+            <h2 className="text-xl md:text-2xl font-bold text-ink">Mali Zote 🏠</h2>
+            <button onClick={() => navigate('/search')} className="text-sm font-semibold text-primary hover:underline">Zaidi →</button>
           </div>
           {loadingN ? (
-            <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:space-y-0">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
               {[1, 2, 3, 4, 5].map(i => <SkeletonListCard key={i} />)}
             </div>
           ) : (
             <>
               {newest.length > 0 ? (
                 <>
-                  {/* Mobile: Vertical list stack */}
-                  <div className="space-y-2.5 md:hidden">
+                  {/* Mobile View Stack */}
+                  <div className="space-y-3 md:hidden">
                     {newest.map(p => (
                       <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
                     ))}
                   </div>
-                  {/* Desktop: Dynamic layout grid wrapper matching the full viewport structure */}
-                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 w-full">
+                  {/* Premium balanced full width desktop matrix view blocks */}
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6 w-full">
                     {newest.map(p => (
                       <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                     ))}
                   </div>
                 </>
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-sm text-ink-5">Hakuna mali zilizoorodheshwa bado</p>
-                  <button onClick={() => navigate('/add')} className="mt-3 text-primary font-semibold underline">
+                <div className="text-center py-16 bg-white rounded-2xl border border-surface-4 shadow-soft">
+                  <p className="text-base text-ink-5 font-medium">Hakuna mali zilizoorodheshwa bado</p>
+                  <button onClick={() => navigate('/add')} className="mt-3 text-primary font-bold underline text-sm hover:text-primary-light">
                     Ongeza Mali Yako →
                   </button>
                 </div>
@@ -429,12 +432,14 @@ export default function Home() {
           )}
         </div>
 
-        {/* CTA Banner Section - Neatly encapsulated into the centered block flow */}
+        {/* Clean full width styled Desktop CTA Banner section */}
         {!user && (
-          <div className="mt-10 mb-6 bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 md:p-10 text-center shadow-green w-full">
-            <h3 className="font-serif text-xl md:text-2xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
-            <p className="text-white/70 text-sm mb-5 max-w-md mx-auto">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
-            <button onClick={() => navigate('/auth')} className="bg-white text-primary px-8 py-3 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift">
+          <div className="bg-gradient-to-br from-primary to-primary-light rounded-3xl p-8 md:p-14 text-center shadow-green w-full border border-primary/10">
+            <h3 className="font-serif text-2xl md:text-4xl font-bold text-white mb-3">Una Mali ya Kukodisha?</h3>
+            <p className="text-white/80 text-sm md:text-base mb-6 max-w-xl mx-auto leading-relaxed">
+              Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania wanaotafuta makazi kila siku.
+            </p>
+            <button onClick={() => navigate('/auth')} className="bg-white text-primary px-10 py-3.5 rounded-full font-bold text-sm md:text-base active:scale-95 transition-all shadow-card hover:shadow-lift hover:bg-surface-2">
               Anza Sasa →
             </button>
           </div>
