@@ -25,9 +25,15 @@ const GENDERS = [
 // Key for storing return URL (must match LoginPromptModal.jsx)
 const RETURN_URL_KEY = 'makaziplus_return_url';
 
+// Get return URL without clearing it (just peek)
+const peekReturnUrl = () => {
+  return localStorage.getItem(RETURN_URL_KEY);
+};
+
 // Get and clear return URL
 const getReturnUrl = () => {
   const url = localStorage.getItem(RETURN_URL_KEY);
+  console.log('🔑 Auth.jsx: Retrieved return URL:', url);
   localStorage.removeItem(RETURN_URL_KEY);
   return url;
 };
@@ -65,11 +71,15 @@ export default function Auth() {
       
       // Check for saved return URL after successful login
       const returnUrl = getReturnUrl();
-      if (returnUrl && (returnUrl.startsWith('/property/') || returnUrl.startsWith('/chat') || returnUrl.startsWith('/dashboard'))) {
+      console.log('🔑 Auth.jsx: After login, returnUrl =', returnUrl);
+      
+      if (returnUrl && returnUrl !== '/auth' && returnUrl !== '/login') {
         // Redirect back to the original page
+        console.log('🔑 Auth.jsx: Redirecting to:', returnUrl);
         navigate(returnUrl);
       } else {
         // Fallback to home page
+        console.log('🔑 Auth.jsx: No valid return URL, going home');
         navigate('/');
       }
     } catch (err) {
@@ -106,11 +116,12 @@ export default function Auth() {
       
       // Check for saved return URL after successful registration
       const returnUrl = getReturnUrl();
-      if (returnUrl && (returnUrl.startsWith('/property/') || returnUrl.startsWith('/chat') || returnUrl.startsWith('/dashboard'))) {
-        // Redirect back to the original page
+      console.log('🔑 Auth.jsx: After register, returnUrl =', returnUrl);
+      
+      if (returnUrl && returnUrl !== '/auth' && returnUrl !== '/login') {
+        console.log('🔑 Auth.jsx: Redirecting to:', returnUrl);
         navigate(returnUrl);
       } else {
-        // Fallback to home page
         navigate('/');
       }
     } catch (err) {
