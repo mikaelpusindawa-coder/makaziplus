@@ -81,9 +81,9 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
   return (
     <div onClick={() => navigate(`/property/${p.id}`)}
       className="card-hover bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4
-        cursor-pointer flex-shrink-0 w-48 md:w-60"
+        cursor-pointer flex flex-col w-full" 
     >
-      <div className="relative h-32 md:h-44 overflow-hidden bg-surface-3">
+      <div className="relative h-32 md:h-44 overflow-hidden bg-surface-3 w-full">
         <img src={img} alt={p.title} loading="lazy"
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
@@ -111,21 +111,23 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
             <HeartIcon filled={isFav} />
           </button>
         )}
-        <div className="absolute bottom-2 right-2 bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize">
+        <div className="absolute bottom-2 left-2 bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize">
           {p.type}
         </div>
       </div>
-      <div className="p-3">
-        <div className="font-serif text-base font-semibold text-primary">
-          {formatPrice(p.price)}
-          <span className="font-sans text-xs font-normal text-ink-5 ml-1">
-            {p.price_type === 'rent' ? '/mwezi' : ''}
-          </span>
+      <div className="p-3 flex-1 flex flex-col justify-between">
+        <div>
+          <div className="font-serif text-base font-semibold text-primary">
+            {formatPrice(p.price)}
+            <span className="font-sans text-xs font-normal text-ink-5 ml-1">
+              {p.price_type === 'rent' ? '/mwezi' : ''}
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-ink mt-0.5 line-clamp-1">{p.title}</p>
+          <p className="text-2xs text-ink-5 mt-0.5 flex items-center gap-0.5">
+            <span>📍</span>{p.area}
+          </p>
         </div>
-        <p className="text-xs font-semibold text-ink mt-0.5 line-clamp-1">{p.title}</p>
-        <p className="text-2xs text-ink-5 mt-0.5 flex items-center gap-0.5">
-          <span>📍</span>{p.area}
-        </p>
         <div className="flex gap-1.5 mt-2 flex-wrap">
           {p.bedrooms > 0 && <span className="badge bg-surface-3 text-ink-4">🛏 {p.bedrooms}</span>}
           {p.bathrooms > 0 && <span className="badge bg-surface-3 text-ink-4">🚿 {p.bathrooms}</span>}
