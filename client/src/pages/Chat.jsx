@@ -36,17 +36,14 @@ export default function Chat() {
     onNewMessage: (data) => {
       if (!isMounted.current) return;
       console.log('📨 New message via socket:', data);
-      // Only add if it's for the current conversation
       if (contact && (data.from_user_id === contact.id || data.to_user_id === contact.id)) {
         setMessages(prev => {
-          // Avoid duplicates
           const exists = prev.find(m => m.id === data.id);
           if (exists) return prev;
           return [...prev, data];
         });
         scrollToBottom();
       }
-      // Refresh conversations to update last message
       fetchConvos();
     },
     
@@ -79,7 +76,6 @@ export default function Chat() {
     onError: (data) => {
       if (!isMounted.current) return;
       console.error('Socket error:', data);
-      // Don't show toast for every error, just log
     }
   };
 
@@ -119,7 +115,6 @@ export default function Chat() {
     if (!user || !userId) return;
     
     try {
-      // Get user info
       let contactData;
       try {
         const userRes = await api.get(`/users/${userId}/info`);
@@ -132,7 +127,6 @@ export default function Chat() {
         setContact(contactData);
       }
       
-      // Get messages
       const msgRes = await api.get(`/messages/${userId}`);
       if (isMounted.current) {
         setMessages(msgRes.data.data || []);
@@ -143,7 +137,6 @@ export default function Chat() {
         }, 200);
       }
       
-      // Mark messages as read via socket
       if (isConnected) {
         markMessagesRead(userId);
       }
@@ -151,7 +144,6 @@ export default function Chat() {
     } catch (err) {
       console.error('Open chat error:', err);
       if (isMounted.current) {
-        // Still open chat even if messages fail
         setContact({ id: userId, name: `Mtumiaji ${userId}`, avatar: null });
         setMessages([]);
         setView('chat');
@@ -188,7 +180,6 @@ export default function Chat() {
     setText('');
     setSending(true);
     
-    // Send typing stopped
     if (stopTyping && contact) {
       stopTyping(contact.id);
       if (typingTimer.current) {
@@ -198,12 +189,9 @@ export default function Chat() {
     
     try {
       if (isConnected && sendMessage) {
-        // Socket handler on server saves to DB AND broadcasts — do NOT also call API
         sendMessage(contact.id, msg);
       } else {
-        // Offline fallback: persist via REST API only
         const r = await api.post('/messages', { to_user_id: contact.id, message: msg });
-        // Optimistically add the sent message to local state
         if (r.data?.data) {
           setMessages(prev => {
             if (prev.find(m => m.id === r.data.data.id)) return prev;
@@ -256,7 +244,7 @@ export default function Chat() {
     );
   }
 
-  // Chat view
+  // Chat view - FIXED for mobile visibility
   if (view === 'chat' && contact) {
     const contactImg = getAvatar(contact);
     const contactName = contact.name || `Mtumiaji ${contact.id}`;
@@ -265,7 +253,7 @@ export default function Chat() {
       <div className="fixed inset-0 bg-white flex flex-col z-50 max-w-lg mx-auto">
         {/* Header */}
         <div 
-          className="flex items-center gap-2.5 px-3.5 py-3 bg-white border-b border-black/7 shadow-sm"
+          className="flex items-center gap-2.5 px-3.5 py-3 bg-white border-b border-black/7 shadow-sm flex-shrink-0"
           style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
         >
           <button 
@@ -315,7 +303,7 @@ export default function Chat() {
           </button>
         </div>
 
-        {/* Messages */}
+        {/* Messages - scrollable area */}
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2.5 bg-surface">
           {messages.length === 0 && (
             <div className="text-center py-12 text-xs text-ink-4">
@@ -361,10 +349,13 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
+        {/* Input - FIXED: Added bottom padding for BottomNav */}
         <div 
-          className="flex items-center gap-2.5 px-3 py-2.5 bg-white border-t border-black/7"
-          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+          className="flex items-center gap-2.5 px-3 py-3 bg-white border-t border-black/7 flex-shrink-0"
+          style={{ 
+            paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 12px))',
+            paddingTop: '12px'
+          }}
         >
           <textarea
             ref={inputRef}
@@ -373,12 +364,12 @@ export default function Chat() {
             onKeyDown={handleKeyPress}
             placeholder={t('chat.type_message')}
             rows={1}
-            className="flex-1 resize-none border-2 border-black/10 rounded-2xl px-3.5 py-2.5 text-sm text-ink bg-surface focus:border-primary focus:bg-white outline-none max-h-28"
+            className="flex-1 resize-none border-2 border-gray-200 rounded-2xl px-3.5 py-2.5 text-sm text-ink bg-white focus:border-primary focus:outline-none transition-all max-h-28"
           />
           <button 
             onClick={handleSend} 
             disabled={sending || !text.trim()}
-            className="w-10 h-10 bg-primary rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50 transition-all active:scale-95"
+            className="w-10 h-10 bg-primary rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-50 transition-all active:scale-95 shadow-md"
           >
             <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-white" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13" />
