@@ -195,7 +195,7 @@ const RecentMarquee = ({ items }) => {
   const doubled = [...items, ...items];
 
   return (
-    <div className="overflow-hidden relative w-full">
+    <div className="overflow-hidden relative w-full rounded-2xl">
       <div className="flex gap-3 animate-marquee" style={{ width: 'max-content' }}>
         {doubled.map((p, i) => (
           <div key={`${p.id}-${i}`} onClick={() => navigate(`/property/${p.id}`)}
@@ -315,127 +315,132 @@ export default function Home() {
   const marqueeItems = newestWithImages.length > 0 ? newestWithImages : newest;
 
   return (
-    <div className="min-h-screen bg-surface pb-24 md:pb-8 page-enter">
+    <div className="min-h-screen bg-surface pb-24 md:pb-8 page-enter w-full">
       <TopBar />
       <HeroSlider properties={heroWithImages} loading={loadingHero} />
 
-      {/* Stats - Full width */}
-      <div className="flex justify-around px-4 py-4 w-full">
-        {STATS.map(s => (
-          <div key={s.label} className="text-center">
-            <div className="text-xl md:text-2xl font-serif font-semibold text-primary">{s.value}</div>
-            <div className="text-2xs text-ink-5 mt-0.5 hidden sm:block">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters - Full width with scroll on mobile */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 w-full">
-        {FILTERS.map(f => (
-          <button key={f.id} onClick={() => setFilter(f.id)}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
-              ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
-            <span>{f.icon}</span> {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Featured Properties - Full width grid */}
-      {featured.length > 0 && (
-        <div className="mt-4 w-full px-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-ink flex items-center gap-2">
-              Featured <span className="text-gold">⭐</span>
-            </h2>
-            <button onClick={() => navigate('/search?premium=1')} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
-              Ona Zote <span>→</span>
-            </button>
-          </div>
-          {loadingF ? (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:overflow-visible">
-              {[1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
+      {/* Main Content Layout Wrapper for Centralizing Desktop Viewports */}
+      <div className="max-w-7xl mx-auto w-full px-4">
+        
+        {/* Stats */}
+        <div className="flex justify-around py-6 w-full border-b border-surface-4 sm:border-0">
+          {STATS.map(s => (
+            <div key={s.label} className="text-center">
+              <div className="text-xl md:text-2xl font-serif font-semibold text-primary">{s.value}</div>
+              <div className="text-2xs text-ink-5 mt-0.5 hidden sm:block">{s.label}</div>
             </div>
-          ) : (
-            <>
-              {/* Mobile: Horizontal scroll */}
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:hidden">
-                {featured.map(p => (
-                  <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
-                ))}
-              </div>
-              {/* Desktop: Responsive grid that fills full width */}
-              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 w-full">
-                {featured.map(p => (
-                  <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
-                ))}
-              </div>
-            </>
-          )}
+          ))}
         </div>
-      )}
 
-      {/* Newest Properties Marquee - Full width */}
-      {marqueeItems.length > 0 && (
-        <div className="mt-6 w-full px-4">
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-base font-bold text-ink flex items-center gap-2">
-              🆕 Mpya Zaidi <span className="text-green-500 text-sm animate-pulse-soft">● Live</span>
-            </h2>
-            <button onClick={() => navigate('/search')} className="text-xs font-medium text-primary hover:underline">Zaidi →</button>
-          </div>
-          <RecentMarquee items={marqueeItems} />
+        {/* Filters */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar py-3 w-full">
+          {FILTERS.map(f => (
+            <button key={f.id} onClick={() => setFilter(f.id)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
+                ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
+              <span>{f.icon}</span> {f.label}
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* All Properties - Full width responsive grid */}
-      <div className="mt-5 w-full px-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
-          <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline">Zaidi →</button>
-        </div>
-        {loadingN ? (
-          <div className="space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:space-y-0">
-            {[1, 2, 3, 4, 5].map(i => <SkeletonListCard key={i} />)}
-          </div>
-        ) : (
-          <>
-            {newest.length > 0 ? (
+        {/* Featured Properties Section */}
+        {featured.length > 0 && (
+          <div className="mt-6 w-full">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+                Featured <span className="text-gold">⭐</span>
+              </h2>
+              <button onClick={() => navigate('/search?premium=1')} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+                Ona Zote <span>→</span>
+              </button>
+            </div>
+            {loadingF ? (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:overflow-visible">
+                {[1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
+              </div>
+            ) : (
               <>
-                {/* Mobile: Vertical stack */}
-                <div className="space-y-2 md:hidden">
-                  {newest.map(p => (
-                    <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                {/* Mobile: Horizontal slider */}
+                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 md:hidden">
+                  {featured.map(p => (
+                    <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                   ))}
                 </div>
-                {/* Desktop: Responsive grid that fills full width */}
+                {/* Desktop: Centered and responsive full-width column layout spaces */}
                 <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 w-full">
-                  {newest.map(p => (
+                  {featured.map(p => (
                     <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
                   ))}
                 </div>
               </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-sm text-ink-5">Hakuna mali zilizoorodheshwa bado</p>
-                <button onClick={() => navigate('/add')} className="mt-3 text-primary font-semibold underline">
-                  Ongeza Mali Yako →
-                </button>
-              </div>
             )}
-          </>
+          </div>
         )}
-      </div>
 
-      {/* CTA Section - Full width */}
-      {!user && (
-        <div className="mx-4 mt-6 mb-4 bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
-          <h3 className="font-serif text-xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
-          <p className="text-white/70 text-sm mb-4">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
-          <button onClick={() => navigate('/auth')} className="bg-white text-primary px-6 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift">
-            Anza Sasa →
-          </button>
+        {/* Newest Properties Marquee */}
+        {marqueeItems.length > 0 && (
+          <div className="mt-8 w-full">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold text-ink flex items-center gap-2">
+                🆕 Mpya Zaidi <span className="text-green-500 text-sm animate-pulse-soft">● Live</span>
+              </h2>
+              <button onClick={() => navigate('/search')} className="text-xs font-medium text-primary hover:underline">Zaidi →</button>
+            </div>
+            <RecentMarquee items={marqueeItems} />
+          </div>
+        )}
+
+        {/* All Properties Section */}
+        <div className="mt-8 w-full">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
+            <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline">Zaidi →</button>
+          </div>
+          {loadingN ? (
+            <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:space-y-0">
+              {[1, 2, 3, 4, 5].map(i => <SkeletonListCard key={i} />)}
+            </div>
+          ) : (
+            <>
+              {newest.length > 0 ? (
+                <>
+                  {/* Mobile: Vertical list stack */}
+                  <div className="space-y-2.5 md:hidden">
+                    {newest.map(p => (
+                      <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                    ))}
+                  </div>
+                  {/* Desktop: Dynamic layout grid wrapper matching the full viewport structure */}
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 w-full">
+                    {newest.map(p => (
+                      <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-sm text-ink-5">Hakuna mali zilizoorodheshwa bado</p>
+                  <button onClick={() => navigate('/add')} className="mt-3 text-primary font-semibold underline">
+                    Ongeza Mali Yako →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+
+        {/* CTA Banner Section - Neatly encapsulated into the centered block flow */}
+        {!user && (
+          <div className="mt-10 mb-6 bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 md:p-10 text-center shadow-green w-full">
+            <h3 className="font-serif text-xl md:text-2xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
+            <p className="text-white/70 text-sm mb-5 max-w-md mx-auto">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
+            <button onClick={() => navigate('/auth')} className="bg-white text-primary px-8 py-3 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift">
+              Anza Sasa →
+            </button>
+          </div>
+        )}
+        
+      </div>
     </div>
   );
 }
