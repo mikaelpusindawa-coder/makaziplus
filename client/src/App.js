@@ -61,16 +61,16 @@ const DarkModeProvider = ({ children }) => {
   return children;
 };
 
-// Responsive layout wrapper
+// Responsive layout wrapper - Fully unconstrained to optimize widescreen viewports
 const Shell = ({ children }) => {
   const { user, loading } = useAuth();
   usePushNotifications(user);
   if (loading) return <LoadScreen />;
   return (
-    <div className={user ? 'md:flex md:min-h-screen' : ''}>
+    <div className={user ? 'md:flex md:min-h-screen bg-surface' : 'bg-surface min-h-screen'}>
       {user && <DesktopSidebar />}
-      <div className="flex-1 min-w-0 relative">
-        <div className={user ? 'max-w-lg mx-auto md:max-w-none md:mx-0' : 'max-w-lg mx-auto'}>
+      <div className="flex-1 min-w-0 relative w-full">
+        <div className="w-full">
           {children}
         </div>
         {user && <BottomNav />}
