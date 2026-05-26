@@ -57,20 +57,44 @@ const FILTERS = [
 const HeroSlider = ({ properties, loading }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
 
   useEffect(() => {
     if (heroPaused || loading) return;
     const displayItems = properties.length > 0 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
     if (displayItems.length <= 1) return;
+    
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % displayItems.length);
     }, 5000);
     return () => clearInterval(interval);
   }, [heroPaused, loading, properties]);
 
+  const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
+  const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const difference = touchStart - touchEnd;
+    const displayItems = properties.length > 0 ? properties.slice(0, 4) : FALLBACK_HERO_IMAGES;
+    
+    if (difference > 50) {
+      setCurrentIndex((prev) => (prev + 1) % displayItems.length);
+      setHeroPaused(true);
+      setTimeout(() => setHeroPaused(false), 8000);
+    }
+    if (difference < -50) {
+      setCurrentIndex((prev) => (prev - 1 + displayItems.length) % displayItems.length);
+      setHeroPaused(true);
+      setTimeout(() => setHeroPaused(false), 8000);
+    }
+    setTouchStart(0);
+    setTouchEnd(0);
+  };
+
   if (loading) {
     return (
-      <div className="relative w-full rounded-2xl overflow-hidden bg-surface-3 h-48 sm:h-64 md:h-80 lg:h-[400px]">
+      <div className="relative mx-3 mt-3 md:mx-4 md:mt-4 rounded-3xl overflow-hidden bg-surface-3" style={{ height: 'clamp(200px, 35vw, 420px)' }}>
         <div className="w-full h-full skeleton" />
       </div>
     );
@@ -81,39 +105,67 @@ const HeroSlider = ({ properties, loading }) => {
 
   return (
     <div
-      className="relative w-full overflow-hidden cursor-pointer rounded-2xl shadow-soft h-48 sm:h-64 md:h-80 lg:h-[400px] group"
+      className="relative mx-3 mt-3 md:mx-4 md:mt-4 rounded-3xl overflow-hidden cursor-pointer group shadow-soft"
+      style={{ height: 'clamp(200px, 35vw, 420px)' }}
       onMouseEnter={() => setHeroPaused(true)}
       onMouseLeave={() => setHeroPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <img
         src={current.isFallback ? current.image_url : getPropertyImage(current)}
         alt={current.title}
         loading="eager"
-        className="w-full h-full object-cover transition-transform duration-700 hover:scale-102"
+        className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
         onError={(e) => { e.target.onerror = null; e.target.src = _HERO_ERROR_SVG; }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-transparent" />
+      
       {current.is_premium === 1 && (
-        <div className="absolute top-3 left-3 bg-gold text-white text-2xs font-bold px-2 py-0.5 rounded-full shadow-gold z-10">
-          ⭐ Premium
+        <div className="absolute top-4 left-4 bg-gold text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-gold z-10">
+          ⭐ Premium Listing
         </div>
       )}
-      <div className="absolute inset-0 p-4 md:p-6 lg:p-8 flex flex-col justify-end">
-        <p className="text-white/80 text-2xs md:text-xs font-medium mb-0.5">
-          {current.isFallback ? 'Karibu MakaziPlus' : `📍 ${current.area || ''}, ${current.city || ''}`}
-        </p>
-        <h2 className="font-serif text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-white leading-tight line-clamp-2 max-w-2xl">
-          {current.title}
-        </h2>
-        {!current.isFallback && (
-          <div className="mt-1.5 flex items-center gap-2">
-            <span className="font-serif text-base md:text-lg font-bold text-gold-light">
-              {formatPrice(current.price)}
-            </span>
-            <span className="text-white/60 text-2xs">{current.price_type === 'rent' ? '/mwezi' : ''}</span>
-          </div>
-        )}
+      
+      <div className="absolute inset-0 p-5 md:p-10 flex flex-col justify-end z-10">
+        <div className="animate-fade-in-up">
+          <p className="text-white/80 text-sm font-medium mb-1">
+            {current.isFallback ? 'Karibu MakaziPlus' : `📍 ${current.area || ''}, ${current.city || ''}`}
+          </p>
+          <h2 className="font-serif text-xl md:text-3xl lg:text-4xl font-semibold text-white leading-tight text-balance">
+            {current.title}
+          </h2>
+          {!current.isFallback && (
+            <div className="mt-3 flex items-center gap-3">
+              <span className="font-serif text-xl md:text-2xl font-bold text-gold-light">
+                {formatPrice(current.price)}
+              </span>
+              <span className="text-white/60 text-sm">{current.price_type === 'rent' ? '/mwezi' : ''}</span>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Nav Controls */}
+      <button onClick={(e) => { e.stopPropagation(); setCurrentIndex((prev) => (prev - 1 + displayItems.length) % displayItems.length); }}
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+        <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 h-5 stroke-white" fill="none" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
+      </button>
+      <button onClick={(e) => { e.stopPropagation(); setCurrentIndex((prev) => (prev + 1) % displayItems.length); }}
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+        <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 h-5 stroke-white" fill="none" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
+      </button>
+
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
+        {displayItems.map((_, idx) => (
+          <button key={idx} onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
+            className={`transition-all duration-300 rounded-full ${currentIndex === idx ? 'w-8 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/60'}`} />
+        ))}
+      </div>
+      {!heroPaused && !loading && displayItems.length > 1 && (
+        <div className="absolute bottom-0 left-0 h-1 bg-gold animate-slide-progress" style={{ width: '100%' }} />
+      )}
     </div>
   );
 };
@@ -124,28 +176,33 @@ const RecentMarquee = ({ items }) => {
   const doubled = [...items, ...items];
 
   return (
-    <div className="overflow-hidden relative w-full rounded-2xl">
-      <div className="flex gap-4 animate-marquee" style={{ width: 'max-content' }}>
+    <div className="overflow-hidden relative">
+      <div className="flex gap-3 animate-marquee" style={{ width: 'max-content' }}>
         {doubled.map((p, i) => (
           <div key={`${p.id}-${i}`} onClick={() => navigate(`/property/${p.id}`)}
-            className="flex-shrink-0 w-44 bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4 cursor-pointer">
+            className="flex-shrink-0 w-44 bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4 cursor-pointer hover:shadow-card transition-all hover:-translate-y-1">
             <div className="h-24 relative overflow-hidden bg-surface-3">
               <img src={getPropertyImage(p)} alt={p.title} className="w-full h-full object-cover" loading="lazy"
                 onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }} />
+              <div className="absolute bottom-1.5 left-1.5 bg-black/50 backdrop-blur-sm text-white text-2xs font-bold px-1.5 py-0.5 rounded-full">
+                🆕 {timeAgo(p.created_at)}
+              </div>
             </div>
             <div className="p-2.5">
               <p className="text-xs font-bold text-primary line-clamp-1">
-                {formatPrice(p.price)} {p.price_type === 'rent' ? '/mw' : ''}
+                {p.price_type === 'rent' ? `TSh ${Math.round(p.price / 1000)}K/mwezi` : `TSh ${Math.round(p.price / 1000000).toFixed(1)}M`}
               </p>
-              <p className="text-2xs text-ink-4 mt-0.5 line-clamp-1">{p.area}</p>
+              <p className="text-2xs text-ink-4 mt-0.5 line-clamp-1">{p.area}, {p.city}</p>
             </div>
           </div>
         ))}
       </div>
       <style>{`
         @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .animate-marquee { animation: marquee 30s linear infinite; }
+        @keyframes slideProgress { from { width: 100%; } to { width: 0%; } }
+        .animate-marquee { animation: marquee 28s linear infinite; }
         .animate-marquee:hover { animation-play-state: paused; }
+        .animate-slide-progress { animation: slideProgress 5s linear forwards; }
       `}</style>
     </div>
   );
@@ -163,7 +220,7 @@ export default function Home() {
   const [loadingF, setLoadingF] = useState(true);
   const [loadingN, setLoadingN] = useState(true);
   const [loadingHero, setLoadingHero] = useState(true);
-  
+
   const buildParams = useCallback(() => {
     const p = {};
     if (filter === 'nyumba') p.type = 'nyumba';
@@ -182,11 +239,7 @@ export default function Home() {
     try {
       const r = await api.get('/properties', { params: { ...buildParams(), premium: 1, limit: 8 } });
       setFeatured(r.data.data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingF(false);
-    }
+    } catch (err) { console.error(err); } finally { setLoadingF(false); }
   }, [buildParams]);
 
   const fetchNewest = useCallback(async () => {
@@ -194,11 +247,7 @@ export default function Home() {
     try {
       const r = await api.get('/properties', { params: { ...buildParams(), limit: 12 } });
       setNewest(r.data.data || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingN(false);
-    }
+    } catch (err) { console.error(err); } finally { setLoadingN(false); }
   }, [buildParams]);
 
   const fetchHeroProperties = useCallback(async () => {
@@ -206,11 +255,7 @@ export default function Home() {
     try {
       const r = await api.get('/properties', { params: { limit: 20 } });
       setHeroProperties(r.data.data || []);
-    } catch {
-      setHeroProperties([]);
-    } finally {
-      setLoadingHero(false);
-    }
+    } catch { setHeroProperties([]); } finally { setLoadingHero(false); }
   }, []);
 
   useEffect(() => {
@@ -238,110 +283,107 @@ export default function Home() {
   const marqueeItems = newestWithImages.length > 0 ? newestWithImages : newest;
 
   return (
-    <div className="w-full flex justify-center bg-surface min-h-screen pb-16">
-      <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8 pt-4 space-y-6">
-        <TopBar />
-        
-        <HeroSlider properties={heroWithImages} loading={loadingHero} />
+    <div className="min-h-screen bg-surface pb-24 md:pb-12 page-enter">
+      <TopBar />
+      <HeroSlider properties={heroWithImages} loading={loadingHero} />
 
-        {/* Stats */}
-        <div className="bg-white rounded-2xl p-4 shadow-soft flex justify-around w-full border border-surface-4">
-          {STATS.map(s => (
-            <div key={s.label} className="text-center">
-              <div className="text-lg md:text-xl font-serif font-semibold text-primary">{s.value}</div>
-              <div className="text-2xs text-ink-5 mt-0.5 font-medium">{s.label}</div>
-            </div>
-          ))}
-        </div>
+      {/* Stats */}
+      <div className="flex justify-around px-4 py-4 md:max-w-4xl md:mx-auto">
+        {STATS.map(s => (
+          <div key={s.label} className="text-center">
+            <div className="text-xl md:text-2xl font-serif font-semibold text-primary">{s.value}</div>
+            <div className="text-2xs text-ink-5 mt-0.5 hidden sm:block font-medium">{s.label}</div>
+          </div>
+        ))}
+      </div>
 
-        {/* Filters */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 w-full">
-          {FILTERS.map(f => (
-            <button key={f.id} onClick={() => setFilter(f.id)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all shadow-soft
-                ${filter === f.id ? 'bg-primary text-white scale-102' : 'bg-white text-ink-4 hover:bg-surface-3'}`}>
-              <span>{f.icon}</span> {f.label}
+      {/* Filter Chips */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto">
+        {FILTERS.map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
+              ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
+            <span>{f.icon}</span> {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Featured Block */}
+      {featured.length > 0 && (
+        <div className="mt-4 md:max-w-4xl md:mx-auto">
+          <div className="flex items-center justify-between px-4 mb-3">
+            <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+              Featured <span className="text-gold">⭐</span>
+            </h2>
+            <button onClick={() => navigate('/search?premium=1')} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+              Ona Zote <span>→</span>
             </button>
-          ))}
-        </div>
-
-        {/* Featured Grid - Maintained 2 columns on mobile, 4 columns on desktop */}
-        {featured.length > 0 && (
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm md:text-base font-bold text-ink flex items-center gap-1">
-                Featured <span className="text-gold">⭐</span>
-              </h2>
-              <button onClick={() => navigate('/search?premium=1')} className="text-2xs font-bold text-primary hover:underline">
-                Ona Zote →
-              </button>
+          </div>
+          {loadingF ? (
+            <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
+              {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
             </div>
-            {loadingF ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full">
-                {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
-              </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
+              {featured.map(p => (
+                <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Newest Marquee */}
+      {marqueeItems.length > 0 && (
+        <div className="mt-6 md:max-w-4xl md:mx-auto">
+          <div className="flex items-center justify-between px-4 mb-2.5">
+            <h2 className="text-base font-bold text-ink flex items-center gap-2">
+              🆕 Mpya Zaidi <span className="text-green-500 text-sm animate-pulse-soft">● Live</span>
+            </h2>
+            <button onClick={() => navigate('/search')} className="text-xs font-medium text-primary hover:underline">Zaidi →</button>
+          </div>
+          <div className="px-4">
+            <RecentMarquee items={marqueeItems} />
+          </div>
+        </div>
+      )}
+
+      {/* Mali Zote Section (Responsive Grid Adaptive System) */}
+      <div className="mt-5 md:max-w-4xl md:mx-auto">
+        <div className="flex items-center justify-between px-4 mb-3">
+          <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
+          <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline">Zaidi →</button>
+        </div>
+        {loadingN ? (
+          <div className="px-4 space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
+            {[1, 2, 3].map(i => <SkeletonListCard key={i} />)}
+          </div>
+        ) : (
+          <div className="px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {newest.length > 0 ? (
+              newest.map(p => (
+                <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
+              ))
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 w-full">
-                {featured.map(p => (
-                  <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
-                ))}
+              <div className="text-center py-12 col-span-full bg-white rounded-2xl border border-surface-4">
+                <p className="text-sm text-ink-5">Hakuna mali zilizoorodheshwa bado</p>
+                <button onClick={() => navigate('/add')} className="mt-3 text-primary font-semibold underline">Ongeza Mali Yako →</button>
               </div>
             )}
           </div>
         )}
-
-        {/* Newest Slider */}
-        {marqueeItems.length > 0 && (
-          <div className="w-full">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold text-ink flex items-center gap-1">
-                🆕 Mpya Zaidi <span className="text-green-500 text-2xs animate-pulse">● Live</span>
-              </h2>
-              <button onClick={() => navigate('/search')} className="text-2xs font-bold text-primary hover:underline">Zaidi →</button>
-            </div>
-            <RecentMarquee items={marqueeItems} />
-          </div>
-        )}
-
-        {/* All Properties Matrix Grid - UPGRADED to grid-cols-1 on Mobile for perfect horizontal rhythm, scaling up beautifully to md:grid-cols-4 on desktop */}
-        <div className="w-full">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm md:text-base font-bold text-ink">Mali Zote 🏠</h2>
-            <button onClick={() => navigate('/search')} className="text-2xs font-bold text-primary hover:underline">Zaidi →</button>
-          </div>
-          {loadingN ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
-              {[1, 2, 3, 4].map(i => <SkeletonListCard key={i} />)}
-            </div>
-          ) : (
-            <>
-              {newest.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                  {newest.map(p => (
-                    <PropertyCard key={p.id} property={p} isFav={favorites.includes(p.id)} onFav={toggleFav} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-10 bg-white rounded-2xl border border-surface-4 shadow-soft w-full">
-                  <p className="text-xs text-ink-5 font-medium">Hakuna mali zilizoorodheshwa bado</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Banner CTA */}
-        {!user && (
-          <div className="bg-gradient-to-br from-primary to-primary-light rounded-2xl p-6 text-center shadow-soft w-full border border-primary/10">
-            <h3 className="font-serif text-base md:text-lg font-bold text-white mb-0.5">Una Mali ya Kukodisha?</h3>
-            <p className="text-white/80 text-2xs mb-3 max-w-md mx-auto">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
-            <button onClick={() => navigate('/auth')} className="bg-white text-primary px-5 py-2 rounded-full font-bold text-2xs active:scale-95 transition-all shadow-soft">
-              Anza Sasa →
-            </button>
-          </div>
-        )}
-        
       </div>
+
+      {/* CTA Layer */}
+      {!user && (
+        <div className="mx-4 mt-6 mb-4 md:max-w-4xl md:mx-auto bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
+          <h3 className="font-serif text-xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
+          <p className="text-white/70 text-sm mb-4">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
+          <button onClick={() => navigate('/auth')} className="bg-white text-primary px-6 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift">
+            Anza Sasa →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
