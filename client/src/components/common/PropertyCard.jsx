@@ -3,67 +3,136 @@ import { useNavigate } from 'react-router-dom';
 import { formatPrice, getPropertyImage, getPlaceholderImage } from '../../utils/helpers';
 
 const HeartIcon = ({ filled }) => (
-  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 transition-all duration-200"
+  <svg viewBox="0 0 24 24" className="w-4 h-4 transition-all duration-200"
     fill={filled ? '#ef4444' : 'none'}
-    stroke={filled ? '#ef4444' : 'currentColor'} strokeWidth="2.5"
+    stroke={filled ? '#ef4444' : 'currentColor'} strokeWidth="2"
     strokeLinecap="round" strokeLinejoin="round"
   >
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
   </svg>
 );
 
-export const PropertyCard = ({ property: p, onFav, isFav }) => {
+export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
   const navigate = useNavigate();
   const img = getPropertyImage(p);
 
+  // High Fidelity Horizontal Card (Enforces spacious 1-column stack layout on mobile, flows perfectly on desktop grids)
+  if (horizontal) {
+    return (
+      <div onClick={() => navigate(`/property/${p.id}`)}
+        className="card-hover flex bg-white rounded-2xl overflow-hidden shadow-soft
+          border border-surface-4 cursor-pointer w-full transition-all duration-200"
+      >
+        {/* Dynamic mobile view preserves native aspect ratio widths cleanly */}
+        <div className="relative w-32 sm:w-36 md:w-40 flex-shrink-0 overflow-hidden bg-surface-3">
+          <img src={img} alt={p.title} loading="lazy"
+            className="w-full h-full object-cover min-h-[100px]"
+            onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
+          />
+          {p.is_premium === 1 && (
+            <div className="absolute bottom-2 left-2 bg-gold text-white text-2xs font-bold px-2 py-0.5 rounded-full z-10">
+              ⭐ Prem
+            </div>
+          )}
+          {(p.video_url || p.video_file) && (
+            <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
+              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" stroke="currentColor" strokeWidth="1">
+                <path d="M2 4v16h20V4H2zm18 14H4V6h16v12zm-9-9v6l5-3-5-3z" />
+              </svg>
+              Video
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
+          <div>
+            <div className="font-serif text-base font-semibold text-primary leading-tight">
+              {formatPrice(p.price)}
+              <span className="font-sans text-xs font-normal text-ink-5 ml-1">
+                {p.price_type === 'rent' ? '/mwezi' : ''}
+              </span>
+            </div>
+            <p className="text-sm font-semibold text-ink mt-0.5 line-clamp-1">{p.title}</p>
+            <p className="text-xs text-ink-5 mt-0.5 flex items-center gap-1">
+              <span>📍</span>{p.area}, {p.city}
+            </p>
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex gap-1.5 flex-wrap">
+              {p.bedrooms > 0 && <span className="badge bg-surface text-ink-4">🛏 {p.bedrooms}</span>}
+              {p.bathrooms > 0 && <span className="badge bg-surface text-ink-4">🚿 {p.bathrooms}</span>}
+              {p.size_sqm > 0 && <span className="badge bg-surface text-ink-4">📐 {p.size_sqm}m²</span>}
+              {(p.owner_verified === 1 || p.owner_verified === true) && (
+                <span className="badge bg-primary-50 text-primary border border-primary/20" title="Mwenye aliyethibitishwa">✓ Verified</span>
+              )}
+            </div>
+            {onFav && (
+              <button onClick={(e) => { e.stopPropagation(); onFav(p.id); }}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all
+                  active:scale-95 ${isFav ? 'text-red-500 bg-red-50' : 'text-ink-5 bg-surface hover:text-red-400'}`}
+              >
+                <HeartIcon filled={isFav} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Premium Standard Vertical Listing Card Framework (For Featured section rows)
   return (
     <div onClick={() => navigate(`/property/${p.id}`)}
-      className="bg-white rounded-xl overflow-hidden shadow-soft border border-surface-4
-        cursor-pointer flex flex-col w-full min-w-0 h-full hover:shadow-md transition-all duration-200" 
+      className="card-hover bg-white rounded-2xl overflow-hidden shadow-soft border border-surface-4
+        cursor-pointer flex-shrink-0 w-48 md:w-60 transition-all duration-200"
     >
-      {/* Aspect Ratio changed to aspect-[16/10] on mobile to give images a wider look when stacked in 1 column */}
-      <div className="relative aspect-[16/10] sm:aspect-[4/3] w-full overflow-hidden bg-surface-3">
+      <div className="relative h-32 md:h-44 overflow-hidden bg-surface-3">
         <img src={img} alt={p.title} loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-300 hover:scale-103"
+          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
         />
         {p.is_premium === 1 && (
-          <div className="absolute top-2 left-2 bg-gold text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-sm">
-            ⭐ Prem
+          <div className="absolute top-2 left-2 bg-gold text-white text-2xs font-bold px-2.5 py-0.5 rounded-full shadow-gold z-10">
+            ⭐ Premium
+          </div>
+        )}
+        {(p.video_url || p.video_file) && (
+          <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
+            <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white" stroke="currentColor" strokeWidth="1">
+              <path d="M2 4v16h20V4H2zm18 14H4V6h16v12zm-9-9v6l5-3-5-3z" />
+            </svg>
+            Video
           </div>
         )}
         {onFav && (
           <button onClick={(e) => { e.stopPropagation(); onFav(p.id); }}
-            className={`absolute top-2 right-2 w-6.5 h-6.5 rounded-full flex items-center justify-center
+            className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center
               shadow-soft transition-all active:scale-90 z-10
-              ${isFav ? 'bg-red-50 text-red-500' : 'bg-black/40 text-white hover:text-red-400'}`}
+              ${isFav ? 'bg-red-50 text-red-500' : 'glass text-ink-4 hover:text-red-400'}`}
           >
             <HeartIcon filled={isFav} />
           </button>
         )}
-        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-xs text-white text-[10px] font-medium px-1.5 py-0.5 rounded-md capitalize">
+        <div className="absolute bottom-2 left-2 bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize z-10">
           {p.type}
         </div>
       </div>
       
-      {/* Typography paddings and limits calibrated perfectly for spacious 1-column reading layout */}
-      <div className="p-3 sm:p-2.5 flex-1 flex flex-col justify-between min-w-0">
-        <div className="min-w-0">
-          <div className="text-sm sm:text-base md:text-sm font-black text-primary truncate">
-            {formatPrice(p.price)}
-            <span className="text-xs sm:text-[10px] font-normal text-ink-5 ml-0.5">
-              {p.price_type === 'rent' ? '/mw' : ''}
-            </span>
-          </div>
-          <p className="text-xs sm:text-xs font-bold text-ink mt-0.5 truncate">{p.title}</p>
-          <p className="text-xs sm:text-[10px] text-ink-5 mt-0.5 truncate">
-            📍 {p.area}
-          </p>
+      <div className="p-3">
+        <div className="font-serif text-base font-semibold text-primary">
+          {formatPrice(p.price)}
+          <span className="font-sans text-xs font-normal text-ink-5 ml-1">
+            {p.price_type === 'rent' ? '/mwezi' : ''}
+          </span>
         </div>
-        <div className="flex gap-1.5 mt-2.5 flex-wrap">
-          {p.bedrooms > 0 && <span className="bg-surface-3 text-ink-4 text-[10px] sm:text-[9px] px-2 py-0.5 sm:px-1.5 rounded font-medium">🛏 {p.bedrooms}</span>}
-          {p.bathrooms > 0 && <span className="bg-surface-3 text-ink-4 text-[10px] sm:text-[9px] px-2 py-0.5 sm:px-1.5 rounded font-medium">🚿 {p.bathrooms}</span>}
-          <span className="bg-surface-3 text-ink-4 text-[10px] sm:text-[9px] px-2 py-0.5 sm:px-1.5 rounded font-medium">👁 {p.views}</span>
+        <p className="text-xs font-semibold text-ink mt-0.5 line-clamp-1">{p.title}</p>
+        <p className="text-2xs text-ink-5 mt-0.5 flex items-center gap-0.5">
+          <span>📍</span>{p.area}
+        </p>
+        <div className="flex gap-1.5 mt-2 flex-wrap">
+          {p.bedrooms > 0 && <span className="badge bg-surface-3 text-ink-4">🛏 {p.bedrooms}</span>}
+          {p.bathrooms > 0 && <span className="badge bg-surface-3 text-ink-4">🚿 {p.bathrooms}</span>}
+          <span className="badge bg-surface-3 text-ink-4">👁 {p.views}</span>
         </div>
       </div>
     </div>
