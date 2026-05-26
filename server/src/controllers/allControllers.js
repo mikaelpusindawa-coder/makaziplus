@@ -1074,7 +1074,7 @@ exports.getTermsOfService = async (req, res) => {
 };
 
 // ============================================================
-// VERIFICATION - UPDATED WITH CLOUDINARY
+// VERIFICATION - UPDATED WITH CLOUDINARY (FIXED SQL SYNTAX ERROR)
 // ============================================================
 
 exports.submitVerification = async (req, res) => {
@@ -1160,10 +1160,14 @@ exports.submitVerification = async (req, res) => {
       );
     }
     
+    // FIXED: Using parameterized query for notification - the apostrophe in "We'll" no longer breaks SQL
+    const notificationTitle = 'Verification Submitted 📋';
+    const notificationBody = `Your ${id_type.toUpperCase()} verification request has been submitted. We'll review it within 24 hours.`;
+    
     await db.execute(
       `INSERT INTO notifications (user_id, title, body, type, created_at)
-       VALUES (?, 'Verification Submitted 📋', 'Your ${id_type.toUpperCase()} verification request has been submitted. We\'ll review it within 24 hours.', 'system', NOW())`,
-      [req.user.id]
+       VALUES (?, ?, ?, 'system', NOW())`,
+      [req.user.id, notificationTitle, notificationBody]
     );
     
     res.json({ success: true, message: 'Verification request submitted!' });
