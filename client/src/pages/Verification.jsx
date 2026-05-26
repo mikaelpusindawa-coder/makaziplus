@@ -35,20 +35,32 @@ export default function Verification() {
   // Load existing verification status
   useEffect(() => {
     const loadVerification = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
       try {
-        const [statusRes, requestRes] = await Promise.all([
-          api.get('/verification/status'),
-          api.get('/admin/verifications/all').catch(() => ({ data: { data: [] } }))
-        ]);
+        // Get verification status (works for all users)
+        const statusRes = await api.get('/verification/status');
         setVerificationStatus(statusRes.data.data);
-        const userRequest = requestRes.data?.data?.find(r => r.user_id === user?.id);
-        if (userRequest) {
-          setVerificationRequest(userRequest);
-          setIdType(userRequest.id_type);
-          setIdNumber(userRequest.id_number);
-          if (userRequest.id_document_front) setFrontPreview(userRequest.id_document_front);
-          if (userRequest.id_document_back) setBackPreview(userRequest.id_document_back);
-          if (userRequest.selfie_url) setSelfiePreview(userRequest.selfie_url);
+        
+        // Only fetch admin verifications if user is admin
+        if (user?.role === 'admin') {
+          try {
+            const requestRes = await api.get('/admin/verifications/all');
+            const userRequest = requestRes.data?.data?.find(r => r.user_id === user?.id);
+            if (userRequest) {
+              setVerificationRequest(userRequest);
+              setIdType(userRequest.id_type);
+              setIdNumber(userRequest.id_number);
+              if (userRequest.id_document_front) setFrontPreview(userRequest.id_document_front);
+              if (userRequest.id_document_back) setBackPreview(userRequest.id_document_back);
+              if (userRequest.selfie_url) setSelfiePreview(userRequest.selfie_url);
+            }
+          } catch (err) {
+            console.error('Load admin verifications error:', err);
+          }
         }
       } catch (err) {
         console.error('Load verification error:', err);
@@ -57,11 +69,7 @@ export default function Verification() {
       }
     };
     
-    if (user) {
-      loadVerification();
-    } else {
-      setLoading(false);
-    }
+    loadVerification();
   }, [user]);
 
   const handleFileChange = (e, type) => {
@@ -171,6 +179,7 @@ export default function Verification() {
       setSelfie(null);
       
     } catch (err) {
+      console.error('Submit error:', err);
       toast(err.response?.data?.message || 'Hitilafu wakati wa kutuma ombi', 'error');
     } finally {
       setSubmitting(false);
@@ -400,7 +409,7 @@ export default function Verification() {
               )}
             </div>
 
-            {/* FIXED: Phone input with better spacing */}
+            {/* Phone input with better spacing */}
             <div>
               <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-2">
                 Nambari ya Simu (Kwa Uthibitisho)
