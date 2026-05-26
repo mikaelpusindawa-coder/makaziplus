@@ -16,21 +16,21 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
   const navigate = useNavigate();
   const img = getPropertyImage(p);
 
-  // High Fidelity Horizontal Card (Enforces horizontal layout on mobile, adapts cleanly to marquee-style vertical stacks on desktop)
+  // High Fidelity Horizontal Card (Enforces spacious balanced rows on mobile, adapts cleanly to marquee-style columns on desktop)
   if (horizontal) {
     return (
       <div onClick={() => navigate(`/property/${p.id}`)}
         className="card-hover flex flex-row md:flex-col bg-white rounded-2xl overflow-hidden shadow-soft
           border border-surface-4 cursor-pointer w-full transition-all duration-200"
       >
-        {/* Dynamic Image Wrapper: Stays 'w-32' side-by-side on mobile, transforms to full width 'md:w-full md:h-48' on desktop */}
-        <div className="relative w-32 sm:w-36 md:w-full md:h-48 flex-shrink-0 overflow-hidden bg-surface-3">
+        {/* Dynamic Image Wrapper: Set to 40% on mobile (w-2/5) up to 50% on small screens (sm:w-1/2) for massive visibility */}
+        <div className="relative w-2/5 sm:w-1/2 md:w-full h-auto md:h-48 flex-shrink-0 overflow-hidden bg-surface-3 min-h-[140px]">
           <img src={img} alt={p.title} loading="lazy"
-            className="w-full h-full object-cover min-h-[100px]"
+            className="absolute inset-0 w-full h-full object-cover md:relative"
             onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
           />
           {p.is_premium === 1 && (
-            <div className="absolute bottom-2 left-2 md:top-2 md:bottom-auto bg-gold text-white text-2xs font-bold px-2 py-0.5 md:px-2.5 md:py-1 rounded-full z-10 shadow-gold">
+            <div className="absolute top-2 left-2 bg-gold text-white text-2xs font-bold px-2 py-0.5 rounded-full z-10 shadow-gold">
               ⭐ Prem
             </div>
           )}
@@ -47,7 +47,7 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
           </div>
         </div>
         
-        {/* Content Section: Fluid layout adjustments for text blocks */}
+        {/* Content Section: Occupies the remaining space cleanly */}
         <div className="flex-1 p-3 md:p-4 min-w-0 flex flex-col justify-between">
           <div>
             <div className="font-serif text-base md:text-lg font-semibold text-primary leading-tight">
