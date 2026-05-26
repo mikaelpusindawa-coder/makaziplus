@@ -147,7 +147,6 @@ const HeroSlider = ({ properties, loading }) => {
         </div>
       </div>
 
-      {/* Nav Controls */}
       <button onClick={(e) => { e.stopPropagation(); setCurrentIndex((prev) => (prev - 1 + displayItems.length) % displayItems.length); }}
         className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
         <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 h-5 stroke-white" fill="none" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
@@ -190,7 +189,12 @@ const RecentMarquee = ({ items }) => {
             </div>
             <div className="p-2.5">
               <p className="text-xs font-bold text-primary line-clamp-1">
-                {p.price_type === 'rent' ? `TSh ${Math.round(p.price / 1000)}K/mwezi` : `TSh ${Math.round(p.price / 1000000).toFixed(1)}M`}
+                {p.price_type === 'rent' 
+                  ? `TSh ${p.price >= 1000000 ? `${(p.price / 1000).toLocaleString()}K` : Math.round(p.price / 1000) + 'K'}/mwezi` 
+                  : p.price >= 1000000 
+                    ? `TSh ${(p.price / 1000000).toFixed(1).replace('.0', '')}M` 
+                    : `TSh ${(p.price / 1000).toFixed(0)}K`
+                }
               </p>
               <p className="text-2xs text-ink-4 mt-0.5 line-clamp-1">{p.area}, {p.city}</p>
             </div>
@@ -287,7 +291,6 @@ export default function Home() {
       <TopBar />
       <HeroSlider properties={heroWithImages} loading={loadingHero} />
 
-      {/* Stats */}
       <div className="flex justify-around px-4 py-4 md:max-w-4xl md:mx-auto">
         {STATS.map(s => (
           <div key={s.label} className="text-center">
@@ -297,7 +300,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Filter Chips */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto">
         {FILTERS.map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)}
@@ -308,7 +310,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Featured Block */}
       {featured.length > 0 && (
         <div className="mt-4 md:max-w-4xl md:mx-auto">
           <div className="flex items-center justify-between px-4 mb-3">
@@ -333,7 +334,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Newest Marquee */}
       {marqueeItems.length > 0 && (
         <div className="mt-6 md:max-w-4xl md:mx-auto">
           <div className="flex items-center justify-between px-4 mb-2.5">
@@ -348,7 +348,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Mali Zote Section (Responsive Grid Adaptive System) */}
       <div className="mt-5 md:max-w-4xl md:mx-auto">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
@@ -374,7 +373,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* CTA Layer */}
       {!user && (
         <div className="mx-4 mt-6 mb-4 md:max-w-4xl md:mx-auto bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
           <h3 className="font-serif text-xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
