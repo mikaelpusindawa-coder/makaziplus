@@ -23,8 +23,8 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
         className="card-hover flex flex-row md:flex-col bg-white rounded-2xl overflow-hidden shadow-soft
           border border-surface-4 cursor-pointer w-full transition-all duration-200"
       >
-        {/* Dynamic Image Wrapper: Set to 40% on mobile (w-2/5) up to 50% on small screens (sm:w-1/2) for massive visibility */}
-        <div className="relative w-2/5 sm:w-1/2 md:w-full h-auto md:h-48 flex-shrink-0 overflow-hidden bg-surface-3 min-h-[140px]">
+        {/* Dynamic Image Wrapper: Set to exactly 3/4 (w-3/4) on mobile for massive and clear visibility, resets to md:w-full on desktop */}
+        <div className="relative w-3/4 md:w-full h-auto md:h-48 flex-shrink-0 overflow-hidden bg-surface-3 min-h-[140px]">
           <img src={img} alt={p.title} loading="lazy"
             className="absolute inset-0 w-full h-full object-cover md:relative"
             onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
@@ -47,8 +47,8 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
           </div>
         </div>
         
-        {/* Content Section: Occupies the remaining space cleanly */}
-        <div className="flex-1 p-3 md:p-4 min-w-0 flex flex-col justify-between">
+        {/* Content Section: Occupies exactly 1/4 (w-1/4) on mobile devices, resets to flex-1 on desktop */}
+        <div className="w-1/4 md:flex-1 p-3 md:p-4 min-w-0 flex flex-col justify-between">
           <div>
             <div className="font-serif text-base md:text-lg font-semibold text-primary leading-tight">
               {formatPrice(p.price)}
