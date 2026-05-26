@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const webpush = require('web-push');
+const { uploadBuffer } = require('../config/cloudinary');
 
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
@@ -280,7 +281,6 @@ exports.subscribePush = async (req, res) => {
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
       return res.status(400).json({ success: false, message: 'Subscription data haipo' });
     }
-    // Upsert: remove stale sub for same endpoint, insert fresh
     await db.execute('DELETE FROM push_subscriptions WHERE endpoint = ?', [endpoint]);
     await db.execute(
       'INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES (?, ?, ?, ?)',
@@ -1074,7 +1074,7 @@ exports.getTermsOfService = async (req, res) => {
 };
 
 // ============================================================
-// VERIFICATION
+// VERIFICATION - UPDATED WITH CLOUDINARY
 // ============================================================
 
 exports.submitVerification = async (req, res) => {
@@ -1098,19 +1098,48 @@ exports.submitVerification = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Nambari ya pasipoti si sahihi' });
     }
     
+    // Cloudinary upload for verification documents
     let idDocumentFront = null;
     let idDocumentBack = null;
     let selfieUrl = null;
     
+    // Helper function to upload buffer to Cloudinary
+    const uploadFileToCloudinary = async (fileBuffer, folder, publicId) => {
+      try {
+        const result = await uploadBuffer(fileBuffer, {
+          folder: `makaziplus/verifications/${folder}`,
+          resource_type: 'image',
+          public_id: `${publicId}-${Date.now()}`,
+        });
+        return result.secure_url;
+      } catch (err) {
+        console.error(`Cloudinary upload error for ${folder}:`, err.message);
+        return null;
+      }
+    };
+    
+    // Upload files to Cloudinary if they exist
     if (req.files) {
       if (req.files['id_document_front'] && req.files['id_document_front'][0]) {
-        idDocumentFront = `/uploads/verifications/${req.files['id_document_front'][0].filename}`;
+        idDocumentFront = await uploadFileToCloudinary(
+          req.files['id_document_front'][0].buffer,
+          'front',
+          `user_${req.user.id}_front`
+        );
       }
       if (req.files['id_document_back'] && req.files['id_document_back'][0]) {
-        idDocumentBack = `/uploads/verifications/${req.files['id_document_back'][0].filename}`;
+        idDocumentBack = await uploadFileToCloudinary(
+          req.files['id_document_back'][0].buffer,
+          'back',
+          `user_${req.user.id}_back`
+        );
       }
       if (req.files['selfie'] && req.files['selfie'][0]) {
-        selfieUrl = `/uploads/verifications/${req.files['selfie'][0].filename}`;
+        selfieUrl = await uploadFileToCloudinary(
+          req.files['selfie'][0].buffer,
+          'selfie',
+          `user_${req.user.id}_selfie`
+        );
       }
     }
     
@@ -1133,14 +1162,14 @@ exports.submitVerification = async (req, res) => {
     
     await db.execute(
       `INSERT INTO notifications (user_id, title, body, type, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
-      [req.user.id, 'Verification Submitted 📋', `Your ${id_type.toUpperCase()} verification request has been submitted. We'll review it within 24 hours.`, 'system']
+       VALUES (?, 'Verification Submitted 📋', 'Your ${id_type.toUpperCase()} verification request has been submitted. We\'ll review it within 24 hours.', 'system', NOW())`,
+      [req.user.id]
     );
     
     res.json({ success: true, message: 'Verification request submitted!' });
   } catch (e) {
     console.error('submitVerification error:', e.message);
-    res.status(500).json({ success: false, message: 'Hitilafu ya seva' });
+    res.status(500).json({ success: false, message: 'Hitilafu ya seva', error: e.message });
   }
 };
 
@@ -1562,7 +1591,6 @@ exports.getAnalyticsCityDistribution = async (req, res) => {
 // PRODUCT MODERATION QUEUE (Pending Properties)
 // ============================================================
 
-// Get all pending properties for admin review
 exports.getPendingProperties = async (req, res) => {
   try {
     const [properties] = await db.execute(`
@@ -1575,7 +1603,6 @@ exports.getPendingProperties = async (req, res) => {
       ORDER BY p.created_at DESC
     `);
     
-    // Get images for each property
     for (let i = 0; i < properties.length; i++) {
       const [images] = await db.execute(
         'SELECT id, image_url, is_primary FROM property_images WHERE property_id = ? ORDER BY sort_order',
@@ -1598,7 +1625,6 @@ exports.getPendingProperties = async (req, res) => {
   }
 };
 
-// Approve a pending property (makes it active)
 exports.approveProperty = async (req, res) => {
   try {
     const propId = parseInt(req.params.id);
@@ -1636,7 +1662,6 @@ exports.approveProperty = async (req, res) => {
   }
 };
 
-// Reject a pending property with reason
 exports.rejectProperty = async (req, res) => {
   try {
     const propId = parseInt(req.params.id);
@@ -1678,7 +1703,6 @@ exports.rejectProperty = async (req, res) => {
   }
 };
 
-// Get single pending property details for inspection
 exports.getPendingPropertyDetails = async (req, res) => {
   try {
     const propId = parseInt(req.params.id);
