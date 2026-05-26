@@ -16,21 +16,21 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
   const navigate = useNavigate();
   const img = getPropertyImage(p);
 
-  // High Fidelity Horizontal Card (Enforces spacious 1-column stack layout on mobile, flows perfectly on desktop grids)
+  // High Fidelity Horizontal Card (Enforces horizontal layout on mobile, adapts cleanly to marquee-style vertical stacks on desktop)
   if (horizontal) {
     return (
       <div onClick={() => navigate(`/property/${p.id}`)}
-        className="card-hover flex bg-white rounded-2xl overflow-hidden shadow-soft
+        className="card-hover flex flex-row md:flex-col bg-white rounded-2xl overflow-hidden shadow-soft
           border border-surface-4 cursor-pointer w-full transition-all duration-200"
       >
-        {/* Dynamic mobile view preserves native aspect ratio widths cleanly */}
-        <div className="relative w-32 sm:w-36 md:w-40 flex-shrink-0 overflow-hidden bg-surface-3">
+        {/* Dynamic Image Wrapper: Stays 'w-32' side-by-side on mobile, transforms to full width 'md:w-full md:h-48' on desktop */}
+        <div className="relative w-32 sm:w-36 md:w-full md:h-48 flex-shrink-0 overflow-hidden bg-surface-3">
           <img src={img} alt={p.title} loading="lazy"
             className="w-full h-full object-cover min-h-[100px]"
             onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
           />
           {p.is_premium === 1 && (
-            <div className="absolute bottom-2 left-2 bg-gold text-white text-2xs font-bold px-2 py-0.5 rounded-full z-10">
+            <div className="absolute bottom-2 left-2 md:top-2 md:bottom-auto bg-gold text-white text-2xs font-bold px-2 py-0.5 md:px-2.5 md:py-1 rounded-full z-10 shadow-gold">
               ⭐ Prem
             </div>
           )}
@@ -42,22 +42,26 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
               Video
             </div>
           )}
+          <div className="absolute top-2 right-2 hidden md:block bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize z-10">
+            {p.type}
+          </div>
         </div>
         
-        <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
+        {/* Content Section: Fluid layout adjustments for text blocks */}
+        <div className="flex-1 p-3 md:p-4 min-w-0 flex flex-col justify-between">
           <div>
-            <div className="font-serif text-base font-semibold text-primary leading-tight">
+            <div className="font-serif text-base md:text-lg font-semibold text-primary leading-tight">
               {formatPrice(p.price)}
               <span className="font-sans text-xs font-normal text-ink-5 ml-1">
                 {p.price_type === 'rent' ? '/mwezi' : ''}
               </span>
             </div>
-            <p className="text-sm font-semibold text-ink mt-0.5 line-clamp-1">{p.title}</p>
+            <p className="text-sm font-semibold text-ink mt-0.5 md:mt-1 line-clamp-1">{p.title}</p>
             <p className="text-xs text-ink-5 mt-0.5 flex items-center gap-1">
               <span>📍</span>{p.area}, {p.city}
             </p>
           </div>
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between mt-2 md:mt-4">
             <div className="flex gap-1.5 flex-wrap">
               {p.bedrooms > 0 && <span className="badge bg-surface text-ink-4">🛏 {p.bedrooms}</span>}
               {p.bathrooms > 0 && <span className="badge bg-surface text-ink-4">🚿 {p.bathrooms}</span>}
@@ -68,7 +72,7 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
             </div>
             {onFav && (
               <button onClick={(e) => { e.stopPropagation(); onFav(p.id); }}
-                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all
+                className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all
                   active:scale-95 ${isFav ? 'text-red-500 bg-red-50' : 'text-ink-5 bg-surface hover:text-red-400'}`}
               >
                 <HeartIcon filled={isFav} />
