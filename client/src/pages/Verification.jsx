@@ -392,7 +392,7 @@ export default function Verification() {
                 value={idNumber}
                 onChange={(e) => setIdNumber(e.target.value)}
                 placeholder={idType === 'nida' ? '12345678901234567890' : 'Weka namba yako'}
-                className="input-field font-mono"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all font-mono"
                 maxLength={idType === 'nida' ? 20 : 50}
               />
               {idType === 'nida' && idNumber && !/^\d{20}$/.test(idNumber) && (
@@ -400,18 +400,19 @@ export default function Verification() {
               )}
             </div>
 
+            {/* FIXED: Phone input with better spacing */}
             <div>
               <label className="block text-xs font-bold text-ink-4 uppercase tracking-wider mb-2">
                 Nambari ya Simu (Kwa Uthibitisho)
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-5">+255</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-5 text-sm font-medium">+255</span>
                 <input
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="7XX XXX XXX"
-                  className="input-field pl-14"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-800 bg-white focus:border-primary focus:outline-none transition-all pl-16 sm:pl-20"
                 />
               </div>
               <p className="text-2xs text-ink-5 mt-1">
