@@ -35,7 +35,6 @@ const LoadScreen = () => (
   </div>
 );
 
-// Auth Guard Component
 const Guard = ({ children, adminOnly }) => {
   const { user, loading } = useAuth();
   if (loading) return <LoadScreen />;
@@ -44,7 +43,6 @@ const Guard = ({ children, adminOnly }) => {
   return children;
 };
 
-// Guest Guard (redirects to home if already logged in)
 const GuestGuard = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <LoadScreen />;
@@ -52,7 +50,6 @@ const GuestGuard = ({ children }) => {
   return children;
 };
 
-// Apply dark mode class to <html> based on stored preference
 const DarkModeProvider = ({ children }) => {
   useEffect(() => {
     const theme = localStorage.getItem('mp_theme') || 'light';
@@ -61,16 +58,17 @@ const DarkModeProvider = ({ children }) => {
   return children;
 };
 
-// Responsive layout wrapper - Fully unconstrained to optimize widescreen viewports
+// Unified layout wrapper balancing absolute responsive width with original sleek branding
 const Shell = ({ children }) => {
   const { user, loading } = useAuth();
   usePushNotifications(user);
   if (loading) return <LoadScreen />;
+  
   return (
-    <div className={user ? 'md:flex md:min-h-screen bg-surface' : 'bg-surface min-h-screen'}>
+    <div className={user ? 'md:flex md:min-h-screen bg-surface' : 'bg-surface'}>
       {user && <DesktopSidebar />}
-      <div className="flex-1 min-w-0 relative w-full">
-        <div className="w-full">
+      <div className="flex-1 min-w-0 relative">
+        <div className="w-full max-w-6xl mx-auto">
           {children}
         </div>
         {user && <BottomNav />}
@@ -82,7 +80,6 @@ const Shell = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public Routes - No Auth Required */}
       <Route path="/" element={<Shell><Home /></Shell>} />
       <Route path="/search" element={<Shell><Search /></Shell>} />
       <Route path="/property/:id" element={<Shell><PropertyDetail /></Shell>} />
@@ -90,11 +87,9 @@ function AppRoutes() {
       <Route path="/privacy" element={<Shell><HelpCenter /></Shell>} />
       <Route path="/terms" element={<Shell><HelpCenter /></Shell>} />
 
-      {/* Auth Routes - Guest Only */}
       <Route path="/auth" element={<GuestGuard><Auth /></GuestGuard>} />
       <Route path="/forgot-password" element={<GuestGuard><ForgotPassword /></GuestGuard>} />
 
-      {/* Protected Routes - Auth Required */}
       <Route path="/chat" element={<Shell><Guard><Chat /></Guard></Shell>} />
       <Route path="/add" element={<Shell><Guard><AddProperty /></Guard></Shell>} />
       <Route path="/edit/:id" element={<Shell><Guard><AddProperty /></Guard></Shell>} />
@@ -106,10 +101,7 @@ function AppRoutes() {
       <Route path="/verification" element={<Shell><Guard><Verification /></Guard></Shell>} />
       <Route path="/bookings" element={<Shell><Guard><Bookings /></Guard></Shell>} />
 
-      {/* Admin Only Routes */}
       <Route path="/admin" element={<Shell><Guard adminOnly><Admin /></Guard></Shell>} />
-
-      {/* 404 Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
