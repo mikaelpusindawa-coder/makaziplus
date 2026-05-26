@@ -47,7 +47,6 @@ router.get('/users/:id/contact', async (req, res) => {
 });
 
 // ── PROPERTIES ────────────────────────────────────────────────────────────────
-// NOTE: specific paths (/sort /recent /my) MUST come before /:id
 router.get('/properties',           prop.getProperties);
 router.get('/properties/my',        protect, prop.getMyProperties);
 router.get('/properties/sort',      prop.getPropertiesWithSort);
@@ -107,8 +106,12 @@ router.get('/bookings/property/:propertyId',  protect, ctrl.getPropertyBookings)
 router.patch('/bookings/:id/status',          protect, ctrl.updateBookingStatus);
 router.delete('/bookings/:id',                protect, ctrl.cancelBooking || ((req, res) => res.status(501).json({ success: false, message: 'Not implemented' })));
 
-// ── VERIFICATION ──────────────────────────────────────────────────────────────
-router.post('/verification/submit', protect, upload.array('documents', 3), ctrl.submitVerification);
+// ── VERIFICATION - FIXED: using fields instead of array ──────────────────────
+router.post('/verification/submit', protect, upload.fields([
+  { name: 'id_document_front', maxCount: 1 },
+  { name: 'id_document_back', maxCount: 1 },
+  { name: 'selfie', maxCount: 1 }
+]), ctrl.submitVerification);
 router.get('/verification/status',  protect, ctrl.getVerificationStatus);
 
 // ── SETTINGS & HELP ───────────────────────────────────────────────────────────
