@@ -169,6 +169,7 @@ const HeroSlider = ({ properties, loading }) => {
   );
 };
 
+// Recent Properties Marquee - FIXED: using formatPrice for correct K/M logic
 const RecentMarquee = ({ items }) => {
   const navigate = useNavigate();
   if (!items.length) return null;
@@ -188,13 +189,9 @@ const RecentMarquee = ({ items }) => {
               </div>
             </div>
             <div className="p-2.5">
+              {/* FIXED: Using formatPrice instead of manual Math.round logic */}
               <p className="text-xs font-bold text-primary line-clamp-1">
-                {p.price_type === 'rent' 
-                  ? `TSh ${p.price >= 1000000 ? `${(p.price / 1000).toLocaleString()}K` : Math.round(p.price / 1000) + 'K'}/mwezi` 
-                  : p.price >= 1000000 
-                    ? `TSh ${(p.price / 1000000).toFixed(1).replace('.0', '')}M` 
-                    : `TSh ${(p.price / 1000).toFixed(0)}K`
-                }
+                {formatPrice(p.price)} {p.price_type === 'rent' ? '/mwezi' : ''}
               </p>
               <p className="text-2xs text-ink-4 mt-0.5 line-clamp-1">{p.area}, {p.city}</p>
             </div>
