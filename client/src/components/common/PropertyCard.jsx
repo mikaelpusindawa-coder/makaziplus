@@ -16,22 +16,22 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
   const navigate = useNavigate();
   const img = getPropertyImage(p);
 
-  // High Fidelity Responsive Card (Adapts flawlessly to grid boxes on Desktop, flows perfectly on Mobile)
+  // High Fidelity Horizontal Card (Enforces spacious 1-column stack layout on mobile, flows perfectly on desktop grids)
   if (horizontal) {
     return (
       <div onClick={() => navigate(`/property/${p.id}`)}
-        className="card-hover flex flex-col bg-white rounded-2xl overflow-hidden shadow-soft
+        className="card-hover flex bg-white rounded-2xl overflow-hidden shadow-soft
           border border-surface-4 cursor-pointer w-full transition-all duration-200"
       >
-        {/* Responsive Image Section: Image is on top for both mobile and desktop screens */}
-        <div className="relative w-full h-44 sm:h-48 md:h-52 flex-shrink-0 overflow-hidden bg-surface-3">
+        {/* Dynamic mobile view preserves native aspect ratio widths cleanly */}
+        <div className="relative w-32 sm:w-36 md:w-40 flex-shrink-0 overflow-hidden bg-surface-3">
           <img src={img} alt={p.title} loading="lazy"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover min-h-[100px]"
             onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }}
           />
           {p.is_premium === 1 && (
-            <div className="absolute top-2 left-2 bg-gold text-white text-2xs font-bold px-2.5 py-0.5 rounded-full shadow-gold z-10">
-              ⭐ Premium
+            <div className="absolute bottom-2 left-2 bg-gold text-white text-2xs font-bold px-2 py-0.5 rounded-full z-10">
+              ⭐ Prem
             </div>
           )}
           {(p.video_url || p.video_file) && (
@@ -42,37 +42,33 @@ export const PropertyCard = ({ property: p, onFav, isFav, horizontal }) => {
               Video
             </div>
           )}
-          <div className="absolute bottom-2 left-2 bg-black/50 text-white text-2xs font-bold px-2 py-0.5 rounded-full capitalize z-10">
-            {p.type}
-          </div>
         </div>
         
-        {/* Content Section: Always below the image on desktop view just like the Marquee layout */}
-        <div className="flex-1 p-3.5 flex flex-col justify-between">
+        <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
           <div>
-            <div className="font-serif text-base md:text-lg font-semibold text-primary leading-tight">
+            <div className="font-serif text-base font-semibold text-primary leading-tight">
               {formatPrice(p.price)}
               <span className="font-sans text-xs font-normal text-ink-5 ml-1">
                 {p.price_type === 'rent' ? '/mwezi' : ''}
               </span>
             </div>
-            <p className="text-sm font-semibold text-ink mt-1 line-clamp-1">{p.title}</p>
+            <p className="text-sm font-semibold text-ink mt-0.5 line-clamp-1">{p.title}</p>
             <p className="text-xs text-ink-5 mt-0.5 flex items-center gap-1">
               <span>📍</span>{p.area}, {p.city}
             </p>
           </div>
-          <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center justify-between mt-2">
             <div className="flex gap-1.5 flex-wrap">
-              {p.bedrooms > 0 && <span className="badge bg-surface-3 text-ink-4">🛏 {p.bedrooms}</span>}
-              {p.bathrooms > 0 && <span className="badge bg-surface-3 text-ink-4">🚿 {p.bathrooms}</span>}
-              {p.size_sqm > 0 && <span className="badge bg-surface-3 text-ink-4">📐 {p.size_sqm}m²</span>}
+              {p.bedrooms > 0 && <span className="badge bg-surface text-ink-4">🛏 {p.bedrooms}</span>}
+              {p.bathrooms > 0 && <span className="badge bg-surface text-ink-4">🚿 {p.bathrooms}</span>}
+              {p.size_sqm > 0 && <span className="badge bg-surface text-ink-4">📐 {p.size_sqm}m²</span>}
               {(p.owner_verified === 1 || p.owner_verified === true) && (
                 <span className="badge bg-primary-50 text-primary border border-primary/20" title="Mwenye aliyethibitishwa">✓ Verified</span>
               )}
             </div>
             {onFav && (
               <button onClick={(e) => { e.stopPropagation(); onFav(p.id); }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-soft
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all
                   active:scale-95 ${isFav ? 'text-red-500 bg-red-50' : 'text-ink-5 bg-surface hover:text-red-400'}`}
               >
                 <HeartIcon filled={isFav} />
