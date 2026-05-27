@@ -352,8 +352,8 @@ export default function Home() {
           </button>
         ))}
 
-        {/* Dynamic Dropdown: Fixed container size width ensures zero structural displacement of adjacent items */}
-        <div className="relative flex-shrink-0 z-30" ref={dropdownRef}>
+        {/* FIXED: Added wrapper isolation context. No button shifting ever again */}
+        <div className="relative inline-block flex-shrink-0 z-30" ref={dropdownRef}>
           <button 
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap shadow-soft
@@ -365,9 +365,9 @@ export default function Home() {
             </svg>
           </button>
 
-          {/* Clean Floating Panel Overlay: Completely absolute layout preventing layout layout distortion below or beside */}
+          {/* FIXED: Strict premium float rendering alignment matrix overlays smoothly without altering structure below */}
           {dropdownOpen && (
-            <div className="absolute left-0 mt-2 w-56 max-h-64 bg-white rounded-xl shadow-xl border border-surface-4 overflow-y-auto z-50 no-scrollbar origin-top-left transition-all">
+            <div className="absolute left-0 right-auto top-full mt-2 w-56 max-h-64 bg-white rounded-xl shadow-xl border border-surface-4 overflow-y-auto z-50 no-scrollbar origin-top-left transition-all">
               <div className="py-1">
                 {TANZANIA_REGIONS.map(reg => (
                   <button
@@ -437,13 +437,16 @@ export default function Home() {
             {[1, 2, 3].map(i => <SkeletonListCard key={i} />)}
           </div>
         ) : (
-          <div className="px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          /* FIXED: Streamlined grid responsiveness properties to safely expand full-width on mobile viewports */
+          <div className="px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 w-full justify-items-stretch">
             {newest.length > 0 ? (
               newest.map(p => (
-                <PropertyCard key={p.id} property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                <div key={p.id} className="w-full flex">
+                  <PropertyCard property={p} horizontal isFav={favorites.includes(p.id)} onFav={toggleFav} />
+                </div>
               ))
             ) : (
-              <div className="text-center py-12 col-span-full bg-white rounded-2xl border border-surface-4">
+              <div className="text-center py-12 col-span-full bg-white rounded-2xl border border-surface-4 w-full">
                 <p className="text-sm text-ink-5">Hakuna mali zilizoorodheshwa bado</p>
                 <button onClick={() => navigate('/add')} className="mt-3 text-primary font-semibold underline">Ongeza Mali Yako →</button>
               </div>
