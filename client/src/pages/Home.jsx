@@ -42,7 +42,6 @@ const STATS = [
   { label: 'Miji Tanzania', value: '20+', icon: '📍' },
 ];
 
-// Clean Base Category Filters (Regions stripped out to be handled by the premium dropdown menu instead)
 const CATEGORY_FILTERS = [
   { id: 'all', label: 'Yote', icon: '✨' },
   { id: 'nyumba', label: 'Nyumba', icon: '🏠' },
@@ -52,7 +51,6 @@ const CATEGORY_FILTERS = [
   { id: 'sale', label: 'Kuuza', icon: '🏷️' },
 ];
 
-// Complete official database list of all Tanzanian Regions for the dropdown selection mapping
 const TANZANIA_REGIONS = [
   { id: 'dar', label: 'Dar es Salaam', apiKey: 'Dar es Salaam' },
   { id: 'dodoma', label: 'Dodoma', apiKey: 'Dodoma' },
@@ -69,7 +67,7 @@ const TANZANIA_REGIONS = [
   { id: 'shinyanga', label: 'Shinyanga', apiKey: 'Shinyanga' },
   { id: 'kagera', label: 'Kagera (Bukoba)', apiKey: 'Kagera' },
   { id: 'mara', label: 'Mara (Musoma)', apiKey: 'Mara' },
-  { id: 'mपेक्षा', label: 'Mtwara', apiKey: 'Mtwara' },
+  { id: 'mtwara', label: 'Mtwara', apiKey: 'Mtwara' },
   { id: 'lindi', label: 'Lindi', apiKey: 'Lindi' },
   { id: 'ruvuma', label: 'Ruvuma (Songea)', apiKey: 'Ruvuma' },
   { id: 'singida', label: 'Singida', apiKey: 'Singida' },
@@ -251,11 +249,9 @@ export default function Home() {
   const [loadingN, setLoadingN] = useState(true);
   const [loadingHero, setLoadingHero] = useState(true);
   
-  // Dropdown visibility toggle state management
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown overlay when user clicks anywhere outside of the container
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -266,7 +262,6 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Dynamically matches current filter string with active region mapping inside TANZANIA_REGIONS collection
   const selectedRegion = TANZANIA_REGIONS.find(r => r.id === filter);
 
   const buildParams = useCallback(() => {
@@ -277,7 +272,6 @@ export default function Home() {
     else if (filter === 'ofisi') p.type = 'ofisi';
     else if (filter === 'sale') p.price_type = 'sale';
     
-    // Dynamically checks if the filter corresponds to any of the 30+ dropdown regions listed above
     const matchedRegion = TANZANIA_REGIONS.find(r => r.id === filter);
     if (matchedRegion) {
       p.city = matchedRegion.apiKey;
@@ -348,7 +342,7 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Highly optimized, scannable horizontally scrolling filter ribbon layout container */}
+      {/* Ribbon Row Container */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto items-center relative">
         {CATEGORY_FILTERS.map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)}
@@ -358,8 +352,8 @@ export default function Home() {
           </button>
         ))}
 
-        {/* Professional Dropdown Component enclosing all 30+ locations seamlessly */}
-        <div className="relative flex-shrink-0" ref={dropdownRef}>
+        {/* Dynamic Dropdown: Fixed container size width ensures zero structural displacement of adjacent items */}
+        <div className="relative flex-shrink-0 z-30" ref={dropdownRef}>
           <button 
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap shadow-soft
@@ -371,8 +365,9 @@ export default function Home() {
             </svg>
           </button>
 
+          {/* Clean Floating Panel Overlay: Completely absolute layout preventing layout layout distortion below or beside */}
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-56 max-h-64 bg-white rounded-xl shadow-xl border border-surface-4 overflow-y-auto z-50 animate-fade-in no-scrollbar">
+            <div className="absolute left-0 mt-2 w-56 max-h-64 bg-white rounded-xl shadow-xl border border-surface-4 overflow-y-auto z-50 no-scrollbar origin-top-left transition-all">
               <div className="py-1">
                 {TANZANIA_REGIONS.map(reg => (
                   <button
