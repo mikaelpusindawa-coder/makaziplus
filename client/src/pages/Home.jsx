@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -42,16 +42,47 @@ const STATS = [
   { label: 'Miji Tanzania', value: '20+', icon: '📍' },
 ];
 
-const FILTERS = [
+// Clean Base Category Filters (Regions stripped out to be handled by the premium dropdown menu instead)
+const CATEGORY_FILTERS = [
   { id: 'all', label: 'Yote', icon: '✨' },
   { id: 'nyumba', label: 'Nyumba', icon: '🏠' },
   { id: 'chumba', label: 'Chumba', icon: '🛏' },
   { id: 'frem', label: 'Frem', icon: '🏢' },
   { id: 'ofisi', label: 'Ofisi', icon: '💼' },
   { id: 'sale', label: 'Kuuza', icon: '🏷️' },
-  { id: 'dar', label: 'Dar', icon: '📍' },
-  { id: 'mwanza', label: 'Mwanza', icon: '📍' },
-  { id: 'arusha', label: 'Arusha', icon: '📍' },
+];
+
+// Complete official database list of all Tanzanian Regions for the dropdown selection mapping
+const TANZANIA_REGIONS = [
+  { id: 'dar', label: 'Dar es Salaam', apiKey: 'Dar es Salaam' },
+  { id: 'dodoma', label: 'Dodoma', apiKey: 'Dodoma' },
+  { id: 'arusha', label: 'Arusha', apiKey: 'Arusha' },
+  { id: 'mwanza', label: 'Mwanza', apiKey: 'Mwanza' },
+  { id: 'zanzibar', label: 'Zanzibar Mjini Magharibi', apiKey: 'Zanzibar' },
+  { id: 'mbeya', label: 'Mbeya', apiKey: 'Mbeya' },
+  { id: 'morogoro', label: 'Morogoro', apiKey: 'Morogoro' },
+  { id: 'tanga', label: 'Tanga', apiKey: 'Tanga' },
+  { id: 'kilimanjaro', label: 'Kilimanjaro (Moshi)', apiKey: 'Kilimanjaro' },
+  { id: 'iringa', label: 'Iringa', apiKey: 'Iringa' },
+  { id: 'tabora', label: 'Tabora', apiKey: 'Tabora' },
+  { id: 'kigoma', label: 'Kigoma', apiKey: 'Kigoma' },
+  { id: 'shinyanga', label: 'Shinyanga', apiKey: 'Shinyanga' },
+  { id: 'kagera', label: 'Kagera (Bukoba)', apiKey: 'Kagera' },
+  { id: 'mara', label: 'Mara (Musoma)', apiKey: 'Mara' },
+  { id: 'mपेक्षा', label: 'Mtwara', apiKey: 'Mtwara' },
+  { id: 'lindi', label: 'Lindi', apiKey: 'Lindi' },
+  { id: 'ruvuma', label: 'Ruvuma (Songea)', apiKey: 'Ruvuma' },
+  { id: 'singida', label: 'Singida', apiKey: 'Singida' },
+  { id: 'manyara', label: 'Manyara', apiKey: 'Manyara' },
+  { id: 'geita', label: 'Geita', apiKey: 'Geita' },
+  { id: 'katavi', label: 'Katavi', apiKey: 'Katavi' },
+  { id: 'njombe', label: 'Njombe', apiKey: 'Njombe' },
+  { id: 'simiyu', label: 'Simiyu', apiKey: 'Simiyu' },
+  { id: 'songwe', label: 'Songwe', apiKey: 'Songwe' },
+  { id: 'pemba_north', label: 'Pemba Kaskazini', apiKey: 'Pemba Kaskazini' },
+  { id: 'pemba_south', label: 'Pemba Kusini', apiKey: 'Pemba Kusini' },
+  { id: 'unguja_north', label: 'Unguja Kaskazini', apiKey: 'Unguja Kaskazini' },
+  { id: 'unguja_south', label: 'Unguja Kusini', apiKey: 'Unguja Kusini' },
 ];
 
 const HeroSlider = ({ properties, loading }) => {
@@ -169,7 +200,6 @@ const HeroSlider = ({ properties, loading }) => {
   );
 };
 
-// Recent Properties Marquee - FIXED: using formatPrice for correct K/M logic
 const RecentMarquee = ({ items }) => {
   const navigate = useNavigate();
   if (!items.length) return null;
@@ -189,7 +219,6 @@ const RecentMarquee = ({ items }) => {
               </div>
             </div>
             <div className="p-2.5">
-              {/* FIXED: Using formatPrice instead of manual Math.round logic */}
               <p className="text-xs font-bold text-primary line-clamp-1">
                 {formatPrice(p.price)} {p.price_type === 'rent' ? '/mwezi' : ''}
               </p>
@@ -221,6 +250,24 @@ export default function Home() {
   const [loadingF, setLoadingF] = useState(true);
   const [loadingN, setLoadingN] = useState(true);
   const [loadingHero, setLoadingHero] = useState(true);
+  
+  // Dropdown visibility toggle state management
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown overlay when user clicks anywhere outside of the container
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Dynamically matches current filter string with active region mapping inside TANZANIA_REGIONS collection
+  const selectedRegion = TANZANIA_REGIONS.find(r => r.id === filter);
 
   const buildParams = useCallback(() => {
     const p = {};
@@ -229,9 +276,13 @@ export default function Home() {
     else if (filter === 'frem') p.type = 'frem';
     else if (filter === 'ofisi') p.type = 'ofisi';
     else if (filter === 'sale') p.price_type = 'sale';
-    else if (filter === 'dar') p.city = 'Dar es Salaam';
-    else if (filter === 'mwanza') p.city = 'Mwanza';
-    else if (filter === 'arusha') p.city = 'Arusha';
+    
+    // Dynamically checks if the filter corresponds to any of the 30+ dropdown regions listed above
+    const matchedRegion = TANZANIA_REGIONS.find(r => r.id === filter);
+    if (matchedRegion) {
+      p.city = matchedRegion.apiKey;
+    }
+    
     return p;
   }, [filter]);
 
@@ -297,14 +348,50 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto">
-        {FILTERS.map(f => (
+      {/* Highly optimized, scannable horizontally scrolling filter ribbon layout container */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto items-center relative">
+        {CATEGORY_FILTERS.map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
               ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
             <span>{f.icon}</span> {f.label}
           </button>
         ))}
+
+        {/* Professional Dropdown Component enclosing all 30+ locations seamlessly */}
+        <div className="relative flex-shrink-0" ref={dropdownRef}>
+          <button 
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap shadow-soft
+              ${selectedRegion ? 'bg-primary text-white shadow-green' : 'bg-white text-ink-4 hover:bg-surface-3 hover:text-ink'}`}
+          >
+            <span>📍</span> {selectedRegion ? selectedRegion.label : 'Chagua Mkoa'}
+            <svg viewBox="0 0 24 24" className={`w-3 h-3 ml-0.5 transition-transform duration-200 fill-none stroke-current stroke-[3] ${dropdownOpen ? 'rotate-180' : ''}`}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+
+          {dropdownOpen && (
+            <div className="absolute right-0 mt-2 w-56 max-h-64 bg-white rounded-xl shadow-xl border border-surface-4 overflow-y-auto z-50 animate-fade-in no-scrollbar">
+              <div className="py-1">
+                {TANZANIA_REGIONS.map(reg => (
+                  <button
+                    key={reg.id}
+                    onClick={() => {
+                      setFilter(reg.id);
+                      setDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2.5 text-xs font-medium transition-colors duration-150 flex items-center justify-between
+                      ${filter === reg.id ? 'bg-primary/10 text-primary font-semibold' : 'text-ink-4 hover:bg-surface-2 hover:text-ink'}`}
+                  >
+                    <span>{reg.label}</span>
+                    {filter === reg.id && <span className="text-primary text-sm">✓</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {featured.length > 0 && (
