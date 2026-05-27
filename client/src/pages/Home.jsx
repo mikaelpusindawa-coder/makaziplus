@@ -343,49 +343,52 @@ export default function Home() {
       </div>
 
       {/* Ribbon Row Container */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 py-2 md:max-w-4xl md:mx-auto items-center relative">
-        {CATEGORY_FILTERS.map(f => (
-          <button key={f.id} onClick={() => setFilter(f.id)}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
-              ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
-            <span>{f.icon}</span> {f.label}
-          </button>
-        ))}
+      {/* PROFESSIONAL FIX: Added isolation stacking context and removed height restrictions during float generation */}
+      <div className="relative md:max-w-4xl md:mx-auto px-4 py-2 z-30">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar items-center w-full">
+          {CATEGORY_FILTERS.map(f => (
+            <button key={f.id} onClick={() => setFilter(f.id)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
+                ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
+              <span>{f.icon}</span> {f.label}
+            </button>
+          ))}
 
-        {/* FIXED: Added wrapper isolation context. No button shifting ever again */}
-        <div className="relative inline-block flex-shrink-0 z-30" ref={dropdownRef}>
-          <button 
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap shadow-soft
-              ${selectedRegion ? 'bg-primary text-white shadow-green' : 'bg-white text-ink-4 hover:bg-surface-3 hover:text-ink'}`}
-          >
-            <span>📍</span> {selectedRegion ? selectedRegion.label : 'Chagua Mkoa'}
-            <svg viewBox="0 0 24 24" className={`w-3 h-3 ml-0.5 transition-transform duration-200 fill-none stroke-current stroke-[3] ${dropdownOpen ? 'rotate-180' : ''}`}>
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
+          {/* Region Trigger Anchor Container */}
+          <div className="relative inline-block flex-shrink-0" ref={dropdownRef}>
+            <button 
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap shadow-soft
+                ${selectedRegion ? 'bg-primary text-white shadow-green' : 'bg-white text-ink-4 hover:bg-surface-3 hover:text-ink'}`}
+            >
+              <span>📍</span> {selectedRegion ? selectedRegion.label : 'Chagua Mkoa'}
+              <svg viewBox="0 0 24 24" className={`w-3 h-3 ml-0.5 transition-transform duration-200 fill-none stroke-current stroke-[3] ${dropdownOpen ? 'rotate-180' : ''}`}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
 
-          {/* FIXED: Strict premium float rendering alignment matrix overlays smoothly without altering structure below */}
-          {dropdownOpen && (
-            <div className="absolute left-0 right-auto top-full mt-2 w-56 max-h-64 bg-white rounded-xl shadow-xl border border-surface-4 overflow-y-auto z-50 no-scrollbar origin-top-left transition-all">
-              <div className="py-1">
-                {TANZANIA_REGIONS.map(reg => (
-                  <button
-                    key={reg.id}
-                    onClick={() => {
-                      setFilter(reg.id);
-                      setDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-2.5 text-xs font-medium transition-colors duration-150 flex items-center justify-between
-                      ${filter === reg.id ? 'bg-primary/10 text-primary font-semibold' : 'text-ink-4 hover:bg-surface-2 hover:text-ink'}`}
-                  >
-                    <span>{reg.label}</span>
-                    {filter === reg.id && <span className="text-primary text-sm">✓</span>}
-                  </button>
-                ))}
+            {/* EXPERT FIX: Turned into screen space overlay dropdown anchor with explicit viewport placement matrix */}
+            {dropdownOpen && (
+              <div className="absolute right-0 md:left-0 md:right-auto top-full mt-2 w-60 max-h-64 bg-white rounded-xl shadow-xl border border-surface-4 overflow-y-auto z-50 no-scrollbar origin-top-right md:origin-top-left transition-all">
+                <div className="py-1">
+                  {TANZANIA_REGIONS.map(reg => (
+                    <button
+                      key={reg.id}
+                      onClick={() => {
+                        setFilter(reg.id);
+                        setDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-xs font-medium transition-colors duration-150 flex items-center justify-between
+                        ${filter === reg.id ? 'bg-primary/10 text-primary font-semibold' : 'text-ink-4 hover:bg-surface-2 hover:text-ink'}`}
+                    >
+                      <span>{reg.label}</span>
+                      {filter === reg.id && <span className="text-primary text-sm">✓</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -437,7 +440,6 @@ export default function Home() {
             {[1, 2, 3].map(i => <SkeletonListCard key={i} />)}
           </div>
         ) : (
-          /* FIXED: Streamlined grid responsiveness properties to safely expand full-width on mobile viewports */
           <div className="px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 w-full justify-items-stretch">
             {newest.length > 0 ? (
               newest.map(p => (
