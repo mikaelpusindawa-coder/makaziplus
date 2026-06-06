@@ -326,7 +326,7 @@ export default function HelpCenter() {
                 <p>Una haki ya kuomba taarifa zako zifutwe wakati wowote kwa mujibu wa sheria za ulinzi wa data. Wasiliana nasi kwa barua pepe kwa maombi ya kufuta akaunti.</p>
               </div>
               <div className="bg-primary-50 rounded-xl p-3 mt-3">
-                <p className="text-xs text-primary-600">Kwa maswali yoyote kuhusu Sera ya Faragha, wasiliana nasi kwa support@makaziplus.co.tz</p>
+                <p className="text-xs text-primary-600">Kwa maswali yoyote kuhusu Sera ya Faragha, wasiliana nasi kwa jembekazini798@gmail.com</p>
               </div>
             </div>
           </div>
