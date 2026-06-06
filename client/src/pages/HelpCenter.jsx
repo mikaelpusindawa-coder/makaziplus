@@ -367,7 +367,7 @@ export default function HelpCenter() {
                 <p>Malipo ya premium na matangazo ya kulipia hayawezi kughairiwa mara baada ya kuthibitishwa. Tafadhali soma maelezo ya kila mpango kabla ya kulipa.</p>
               </div>
               <div className="bg-primary-50 rounded-xl p-3 mt-3">
-                <p className="text-xs text-primary-600">Kwa maswali yoyote kuhusu Masharti ya Matumizi, wasiliana nasi kwa support@makaziplus.co.tz</p>
+                <p className="text-xs text-primary-600">Kwa maswali yoyote kuhusu Masharti ya Matumizi, wasiliana nasi kwa jembekazini798@gmail.com</p>
               </div>
             </div>
           </div>
