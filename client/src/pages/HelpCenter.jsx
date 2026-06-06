@@ -147,9 +147,9 @@ export default function HelpCenter() {
   };
 
   const CONTACTS = [
-    { icon: '📧', label: 'Barua Pepe', value: 'support@makaziplus.co.tz', action: 'mailto:support@makaziplus.co.tz' },
-    { icon: '📞', label: 'Simu', value: '+255 700 000 000', action: 'tel:+255700000000' },
-    { icon: '💬', label: 'WhatsApp', value: '+255 700 000 001', action: 'https://wa.me/255700000001' },
+    { icon: '📧', label: 'Barua Pepe', value: 'Jembekazini798@gmail.com', action: 'mailto:Jembekazini798@gmail.com' },
+    { icon: '📞', label: 'Simu', value: '+255 748 523 935', action: 'tel:+255748523935' },
+    { icon: '💬', label: 'WhatsApp', value: '+255 752 109 270', action: 'https://wa.me/255748523935' },
   ];
 
   const QUICK_LINKS = [
@@ -382,7 +382,7 @@ export default function HelpCenter() {
           <div className="flex justify-center gap-4 mt-2">
             <button onClick={() => setActiveTab('privacy')} className="text-2xs text-primary hover:underline">Sera ya Faragha</button>
             <button onClick={() => setActiveTab('terms')} className="text-2xs text-primary hover:underline">Masharti ya Matumizi</button>
-            <button onClick={() => window.open('mailto:support@makaziplus.co.tz')} className="text-2xs text-primary hover:underline">Wasiliana Nasi</button>
+            <button onClick={() => window.open('gmail:jembekazini798@gmail.com')} className="text-2xs text-primary hover:underline">Wasiliana Nasi</button>
           </div>
         </div>
       </div>
