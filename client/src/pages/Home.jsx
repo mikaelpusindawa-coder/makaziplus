@@ -7,6 +7,7 @@ import { PropertyCard } from '../components/common/PropertyCard';
 import { SkeletonCard, SkeletonListCard } from '../components/common/Spinner';
 import api from '../utils/api';
 import { formatPrice, getPropertyImage, getPlaceholderImage, timeAgo } from '../utils/helpers';
+import { Home as HomeIcon, Users, MapPin, Star, Sparkles, Bed, Building2, Briefcase, Tag, TrendingUp, Clock, Eye, MessageCircle, Heart, Plus, Bell, User, Search, Filter, ChevronDown, ChevronLeft, ChevronRight, Crown, CheckCircle, Calendar, Shield, CreditCard, AlertCircle, X, Menu, LogOut, Settings, HelpCircle, Phone, Mail, Globe, Facebook, Twitter, Instagram, Linkedin, Youtube, Github, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, ChevronUp, ChevronRight, DollarSign, Percent, Award, Zap, ThumbsUp, ThumbsDown, Flag, Bookmark, Share2, Copy, ExternalLink, Download, Upload, Trash2, Edit, Save, PlusCircle, MinusCircle, ShoppingCart, Package, Truck, Clock as ClockIcon, Map, Navigation, Compass, LocateFixed, Volume2, VolumeX, Play, Pause, Maximize, Minimize, Sun, Moon, Laptop, Battery, Wifi, Bluetooth, Coffee, Music, Film, Image, Video, Camera, Mic, Headphones, PhoneCall, MailOpen, Inbox, Send, Archive, Folder, File, FileText, FileImage, FileVideo, FileAudio, DownloadCloud, UploadCloud, Cloud, CloudRain, CloudSnow, Wind, Droplet, Thermometer, Activity, HeartPulse, Stethoscope, Syringe, Pill, Hospital, Ambulance, Flame, Zap as ZapIcon, Circle, Square, Triangle, Hexagon, Pentagon, Octagon, Star as StarIcon, Heart as HeartIcon, ThumbsUp as ThumbsUpIcon, ThumbsDown as ThumbsDownIcon } from 'lucide-react';
 
 const _HERO_ERROR_SVG = (() => {
   const s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1B4F72"/><stop offset="1" stop-color="#2E86C1"/></linearGradient></defs><rect width="1200" height="500" fill="url(%23g)"/><text x="600" y="250" text-anchor="middle" font-size="36" font-weight="700" font-family="system-ui,sans-serif" fill="rgba(255,255,255,0.9)">MakaziPlus</text></svg>`;
@@ -37,18 +38,18 @@ const FALLBACK_HERO_IMAGES = [
 ];
 
 const STATS = [
-  { label: 'Mali Zilizoorodheshwa', value: '10K+', icon: '🏠' },
-  { label: 'Watumiaji Wanaokua', value: '50K+', icon: '👥' },
-  { label: 'Miji Tanzania', value: '20+', icon: '📍' },
+  { label: 'Mali Zilizoorodheshwa', value: '10K+', icon: HomeIcon },
+  { label: 'Watumiaji Wanaokua', value: '50K+', icon: Users },
+  { label: 'Miji Tanzania', value: '20+', icon: MapPin },
 ];
 
 const CATEGORY_FILTERS = [
-  { id: 'all', label: 'Yote', icon: '✨' },
-  { id: 'nyumba', label: 'Nyumba', icon: '🏠' },
-  { id: 'chumba', label: 'Chumba', icon: '🛏' },
-  { id: 'frem', label: 'Frem', icon: '🏢' },
-  { id: 'ofisi', label: 'Ofisi', icon: '💼' },
-  { id: 'sale', label: 'Kuuza', icon: '🏷️' },
+  { id: 'all', label: 'Yote', icon: Sparkles },
+  { id: 'nyumba', label: 'Nyumba', icon: HomeIcon },
+  { id: 'chumba', label: 'Chumba', icon: Bed },
+  { id: 'frem', label: 'Frem', icon: Building2 },
+  { id: 'ofisi', label: 'Ofisi', icon: Briefcase },
+  { id: 'sale', label: 'Kuuza', icon: Tag },
 ];
 
 const TANZANIA_REGIONS = [
@@ -152,15 +153,16 @@ const HeroSlider = ({ properties, loading }) => {
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/40 to-transparent" />
       
       {current.is_premium === 1 && (
-        <div className="absolute top-4 left-4 bg-gold text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-gold z-10">
-          ⭐ Premium Listing
+        <div className="absolute top-4 left-4 bg-gold text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-gold z-10 flex items-center gap-1">
+          <Star className="w-3 h-3 fill-current" /> Premium Listing
         </div>
       )}
       
       <div className="absolute inset-0 p-5 md:p-10 flex flex-col justify-end z-10">
         <div className="animate-fade-in-up">
-          <p className="text-white/80 text-sm font-medium mb-1">
-            {current.isFallback ? 'Karibu MakaziPlus' : `📍 ${current.area || ''}, ${current.city || ''}`}
+          <p className="text-white/80 text-sm font-medium mb-1 flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5" />
+            {current.isFallback ? 'Karibu MakaziPlus' : `${current.area || ''}, ${current.city || ''}`}
           </p>
           <h2 className="font-serif text-xl md:text-3xl lg:text-4xl font-semibold text-white leading-tight text-balance">
             {current.title}
@@ -178,11 +180,11 @@ const HeroSlider = ({ properties, loading }) => {
 
       <button onClick={(e) => { e.stopPropagation(); setCurrentIndex((prev) => (prev - 1 + displayItems.length) % displayItems.length); }}
         className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-        <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 h-5 stroke-white" fill="none" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
+        <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
       </button>
       <button onClick={(e) => { e.stopPropagation(); setCurrentIndex((prev) => (prev + 1) % displayItems.length); }}
         className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-        <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 h-5 stroke-white" fill="none" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
+        <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
       </button>
 
       <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
@@ -212,8 +214,8 @@ const RecentMarquee = ({ items }) => {
             <div className="h-24 relative overflow-hidden bg-surface-3">
               <img src={getPropertyImage(p)} alt={p.title} className="w-full h-full object-cover" loading="lazy"
                 onError={(e) => { e.target.onerror = null; e.target.src = getPlaceholderImage(p.type, p.id); }} />
-              <div className="absolute bottom-1.5 left-1.5 bg-black/50 backdrop-blur-sm text-white text-2xs font-bold px-1.5 py-0.5 rounded-full">
-                🆕 {timeAgo(p.created_at)}
+              <div className="absolute bottom-1.5 left-1.5 bg-black/50 backdrop-blur-sm text-white text-2xs font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                <Clock className="w-2.5 h-2.5" /> {timeAgo(p.created_at)}
               </div>
             </div>
             <div className="p-2.5">
@@ -328,31 +330,44 @@ export default function Home() {
   const newestWithImages = newest.filter(p => Array.isArray(p.images) && p.images.length > 0);
   const marqueeItems = newestWithImages.length > 0 ? newestWithImages : newest;
 
+  const IconComponent = ({ icon: Icon, className = "w-3.5 h-3.5" }) => {
+    if (!Icon) return null;
+    return <Icon className={className} />;
+  };
+
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-12 page-enter">
       <TopBar />
       <HeroSlider properties={heroWithImages} loading={loadingHero} />
 
       <div className="flex justify-around px-4 py-4 md:max-w-4xl md:mx-auto">
-        {STATS.map(s => (
-          <div key={s.label} className="text-center">
-            <div className="text-xl md:text-2xl font-serif font-semibold text-primary">{s.value}</div>
-            <div className="text-2xs text-ink-5 mt-0.5 hidden sm:block font-medium">{s.label}</div>
-          </div>
-        ))}
+        {STATS.map(s => {
+          const StatIcon = s.icon;
+          return (
+            <div key={s.label} className="text-center">
+              <div className="text-xl md:text-2xl font-serif font-semibold text-primary">{s.value}</div>
+              <div className="text-2xs text-ink-5 mt-0.5 hidden sm:block font-medium flex items-center justify-center gap-1">
+                <StatIcon className="w-3 h-3 inline" /> {s.label}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Ribbon Row Container */}
       {/* PROFESSIONAL FIX: Added isolation stacking context and removed height restrictions during float generation */}
       <div className="relative md:max-w-4xl md:mx-auto px-4 py-2 z-30">
         <div className="flex gap-2 overflow-x-auto no-scrollbar items-center w-full">
-          {CATEGORY_FILTERS.map(f => (
-            <button key={f.id} onClick={() => setFilter(f.id)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
-                ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
-              <span>{f.icon}</span> {f.label}
-            </button>
-          ))}
+          {CATEGORY_FILTERS.map(f => {
+            const FilterIcon = f.icon;
+            return (
+              <button key={f.id} onClick={() => setFilter(f.id)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap
+                  ${filter === f.id ? 'bg-primary text-white shadow-green scale-[1.02]' : 'bg-white text-ink-4 shadow-soft hover:bg-surface-3 hover:text-ink'}`}>
+                <FilterIcon className="w-3.5 h-3.5" /> {f.label}
+              </button>
+            );
+          })}
 
           {/* Region Trigger Anchor Container */}
           <div className="relative inline-block flex-shrink-0" ref={dropdownRef}>
@@ -361,10 +376,8 @@ export default function Home() {
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 active:scale-95 whitespace-nowrap shadow-soft
                 ${selectedRegion ? 'bg-primary text-white shadow-green' : 'bg-white text-ink-4 hover:bg-surface-3 hover:text-ink'}`}
             >
-              <span>📍</span> {selectedRegion ? selectedRegion.label : 'Chagua Mkoa'}
-              <svg viewBox="0 0 24 24" className={`w-3 h-3 ml-0.5 transition-transform duration-200 fill-none stroke-current stroke-[3] ${dropdownOpen ? 'rotate-180' : ''}`}>
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+              <MapPin className="w-3.5 h-3.5" /> {selectedRegion ? selectedRegion.label : 'Chagua Mkoa'}
+              <ChevronDown className={`w-3 h-3 ml-0.5 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* EXPERT FIX: Turned into screen space overlay dropdown anchor with explicit viewport placement matrix */}
@@ -381,8 +394,10 @@ export default function Home() {
                       className={`w-full text-left px-4 py-2.5 text-xs font-medium transition-colors duration-150 flex items-center justify-between
                         ${filter === reg.id ? 'bg-primary/10 text-primary font-semibold' : 'text-ink-4 hover:bg-surface-2 hover:text-ink'}`}
                     >
-                      <span>{reg.label}</span>
-                      {filter === reg.id && <span className="text-primary text-sm">✓</span>}
+                      <span className="flex items-center gap-2">
+                        <MapPin className="w-3 h-3" /> {reg.label}
+                      </span>
+                      {filter === reg.id && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
                     </button>
                   ))}
                 </div>
@@ -396,10 +411,10 @@ export default function Home() {
         <div className="mt-4 md:max-w-4xl md:mx-auto">
           <div className="flex items-center justify-between px-4 mb-3">
             <h2 className="text-lg font-bold text-ink flex items-center gap-2">
-              Featured <span className="text-gold">⭐</span>
+              Featured <Star className="w-4 h-4 fill-gold text-gold" />
             </h2>
             <button onClick={() => navigate('/search?premium=1')} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
-              Ona Zote <span>→</span>
+              Ona Zote <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
           {loadingF ? (
@@ -420,7 +435,7 @@ export default function Home() {
         <div className="mt-6 md:max-w-4xl md:mx-auto">
           <div className="flex items-center justify-between px-4 mb-2.5">
             <h2 className="text-base font-bold text-ink flex items-center gap-2">
-              🆕 Mpya Zaidi <span className="text-green-500 text-sm animate-pulse-soft">● Live</span>
+              <TrendingUp className="w-4 h-4 text-green-500" /> Mpya Zaidi <span className="text-green-500 text-sm animate-pulse-soft">● Live</span>
             </h2>
             <button onClick={() => navigate('/search')} className="text-xs font-medium text-primary hover:underline">Zaidi →</button>
           </div>
@@ -432,8 +447,12 @@ export default function Home() {
 
       <div className="mt-5 md:max-w-4xl md:mx-auto">
         <div className="flex items-center justify-between px-4 mb-3">
-          <h2 className="text-lg font-bold text-ink">Mali Zote 🏠</h2>
-          <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline">Zaidi →</button>
+          <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+            <HomeIcon className="w-4 h-4" /> Mali Zote
+          </h2>
+          <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+            Zaidi <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
         {loadingN ? (
           <div className="px-4 space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
@@ -449,8 +468,11 @@ export default function Home() {
               ))
             ) : (
               <div className="text-center py-12 col-span-full bg-white rounded-2xl border border-surface-4 w-full">
+                <HomeIcon className="w-12 h-12 text-ink-4 mx-auto mb-3" />
                 <p className="text-sm text-ink-5">Hakuna mali zilizoorodheshwa bado</p>
-                <button onClick={() => navigate('/add')} className="mt-3 text-primary font-semibold underline">Ongeza Mali Yako →</button>
+                <button onClick={() => navigate('/add')} className="mt-3 text-primary font-semibold underline flex items-center justify-center gap-1 mx-auto">
+                  <PlusCircle className="w-4 h-4" /> Ongeza Mali Yako →
+                </button>
               </div>
             )}
           </div>
@@ -459,10 +481,12 @@ export default function Home() {
 
       {!user && (
         <div className="mx-4 mt-6 mb-4 md:max-w-4xl md:mx-auto bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
-          <h3 className="font-serif text-xl font-semibold text-white mb-2">Una Mali ya Kukodisha?</h3>
+          <h3 className="font-serif text-xl font-semibold text-white mb-2 flex items-center justify-center gap-2">
+            <HomeIcon className="w-5 h-5" /> Una Mali ya Kukodisha?
+          </h3>
           <p className="text-white/70 text-sm mb-4">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
-          <button onClick={() => navigate('/auth')} className="bg-white text-primary px-6 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift">
-            Anza Sasa →
+          <button onClick={() => navigate('/auth')} className="bg-white text-primary px-6 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift flex items-center justify-center gap-2 mx-auto">
+            Anza Sasa <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       )}
