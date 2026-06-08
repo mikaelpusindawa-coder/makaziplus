@@ -7,7 +7,11 @@ import { PropertyCard } from '../components/common/PropertyCard';
 import { SkeletonCard, SkeletonListCard } from '../components/common/Spinner';
 import api from '../utils/api';
 import { formatPrice, getPropertyImage, getPlaceholderImage, timeAgo } from '../utils/helpers';
-import { Home as HomeIcon, Users, MapPin, Star, Sparkles, Bed, Building2, Briefcase, Tag, TrendingUp, Clock, Eye, MessageCircle, Heart, Plus, Bell, User, Search, Filter, ChevronDown, ChevronLeft, ChevronRight, Crown, CheckCircle, Calendar, Shield, CreditCard, AlertCircle, X, Menu, LogOut, Settings, HelpCircle, Phone, Mail, Globe, Facebook, Twitter, Instagram, Linkedin, Youtube, Github, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, ChevronUp, ChevronRight, DollarSign, Percent, Award, Zap, ThumbsUp, ThumbsDown, Flag, Bookmark, Share2, Copy, ExternalLink, Download, Upload, Trash2, Edit, Save, PlusCircle, MinusCircle, ShoppingCart, Package, Truck, Clock as ClockIcon, Map, Navigation, Compass, LocateFixed, Volume2, VolumeX, Play, Pause, Maximize, Minimize, Sun, Moon, Laptop, Battery, Wifi, Bluetooth, Coffee, Music, Film, Image, Video, Camera, Mic, Headphones, PhoneCall, MailOpen, Inbox, Send, Archive, Folder, File, FileText, FileImage, FileVideo, FileAudio, DownloadCloud, UploadCloud, Cloud, CloudRain, CloudSnow, Wind, Droplet, Thermometer, Activity, HeartPulse, Stethoscope, Syringe, Pill, Hospital, Ambulance, Flame, Zap as ZapIcon, Circle, Square, Triangle, Hexagon, Pentagon, Octagon, Star as StarIcon, Heart as HeartIcon, ThumbsUp as ThumbsUpIcon, ThumbsDown as ThumbsDownIcon } from 'lucide-react';
+import { 
+  Home, Users, MapPin, Star, Sparkles, Bed, Building2, Briefcase, Tag, 
+  TrendingUp, Clock, ChevronLeft, ChevronRight, CheckCircle, ArrowRight, 
+  PlusCircle, ChevronDown 
+} from 'lucide-react';
 
 const _HERO_ERROR_SVG = (() => {
   const s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1B4F72"/><stop offset="1" stop-color="#2E86C1"/></linearGradient></defs><rect width="1200" height="500" fill="url(%23g)"/><text x="600" y="250" text-anchor="middle" font-size="36" font-weight="700" font-family="system-ui,sans-serif" fill="rgba(255,255,255,0.9)">MakaziPlus</text></svg>`;
@@ -38,14 +42,14 @@ const FALLBACK_HERO_IMAGES = [
 ];
 
 const STATS = [
-  { label: 'Mali Zilizoorodheshwa', value: '10K+', icon: HomeIcon },
+  { label: 'Mali Zilizoorodheshwa', value: '10K+', icon: Home },
   { label: 'Watumiaji Wanaokua', value: '50K+', icon: Users },
   { label: 'Miji Tanzania', value: '20+', icon: MapPin },
 ];
 
 const CATEGORY_FILTERS = [
   { id: 'all', label: 'Yote', icon: Sparkles },
-  { id: 'nyumba', label: 'Nyumba', icon: HomeIcon },
+  { id: 'nyumba', label: 'Nyumba', icon: Home },
   { id: 'chumba', label: 'Chumba', icon: Bed },
   { id: 'frem', label: 'Frem', icon: Building2 },
   { id: 'ofisi', label: 'Ofisi', icon: Briefcase },
@@ -330,11 +334,6 @@ export default function Home() {
   const newestWithImages = newest.filter(p => Array.isArray(p.images) && p.images.length > 0);
   const marqueeItems = newestWithImages.length > 0 ? newestWithImages : newest;
 
-  const IconComponent = ({ icon: Icon, className = "w-3.5 h-3.5" }) => {
-    if (!Icon) return null;
-    return <Icon className={className} />;
-  };
-
   return (
     <div className="min-h-screen bg-surface pb-24 md:pb-12 page-enter">
       <TopBar />
@@ -355,7 +354,6 @@ export default function Home() {
       </div>
 
       {/* Ribbon Row Container */}
-      {/* PROFESSIONAL FIX: Added isolation stacking context and removed height restrictions during float generation */}
       <div className="relative md:max-w-4xl md:mx-auto px-4 py-2 z-30">
         <div className="flex gap-2 overflow-x-auto no-scrollbar items-center w-full">
           {CATEGORY_FILTERS.map(f => {
@@ -380,7 +378,6 @@ export default function Home() {
               <ChevronDown className={`w-3 h-3 ml-0.5 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* EXPERT FIX: Turned into screen space overlay dropdown anchor with explicit viewport placement matrix */}
             {dropdownOpen && (
               <div className="absolute right-0 md:left-0 md:right-auto top-full mt-2 w-60 max-h-64 bg-white rounded-xl shadow-xl border border-surface-4 overflow-y-auto z-50 no-scrollbar origin-top-right md:origin-top-left transition-all">
                 <div className="py-1">
@@ -448,7 +445,7 @@ export default function Home() {
       <div className="mt-5 md:max-w-4xl md:mx-auto">
         <div className="flex items-center justify-between px-4 mb-3">
           <h2 className="text-lg font-bold text-ink flex items-center gap-2">
-            <HomeIcon className="w-4 h-4" /> Mali Zote
+            <Home className="w-4 h-4" /> Mali Zote
           </h2>
           <button onClick={() => navigate('/search')} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
             Zaidi <ArrowRight className="w-3.5 h-3.5" />
@@ -468,7 +465,7 @@ export default function Home() {
               ))
             ) : (
               <div className="text-center py-12 col-span-full bg-white rounded-2xl border border-surface-4 w-full">
-                <HomeIcon className="w-12 h-12 text-ink-4 mx-auto mb-3" />
+                <Home className="w-12 h-12 text-ink-4 mx-auto mb-3" />
                 <p className="text-sm text-ink-5">Hakuna mali zilizoorodheshwa bado</p>
                 <button onClick={() => navigate('/add')} className="mt-3 text-primary font-semibold underline flex items-center justify-center gap-1 mx-auto">
                   <PlusCircle className="w-4 h-4" /> Ongeza Mali Yako →
@@ -482,7 +479,7 @@ export default function Home() {
       {!user && (
         <div className="mx-4 mt-6 mb-4 md:max-w-4xl md:mx-auto bg-gradient-to-br from-primary to-primary-light rounded-3xl p-6 text-center shadow-green">
           <h3 className="font-serif text-xl font-semibold text-white mb-2 flex items-center justify-center gap-2">
-            <HomeIcon className="w-5 h-5" /> Una Mali ya Kukodisha?
+            <Home className="w-5 h-5" /> Una Mali ya Kukodisha?
           </h3>
           <p className="text-white/70 text-sm mb-4">Weka tangazo lako bure leo. Fikia wateja elfu za Tanzania.</p>
           <button onClick={() => navigate('/auth')} className="bg-white text-primary px-6 py-2.5 rounded-full font-bold text-sm active:scale-95 transition-all shadow-soft hover:shadow-lift flex items-center justify-center gap-2 mx-auto">
