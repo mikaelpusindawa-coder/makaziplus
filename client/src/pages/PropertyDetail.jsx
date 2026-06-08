@@ -9,7 +9,7 @@ import { LoginPromptModal } from '../components/common/LoginPromptModal';
 import { formatPrice, getAvatar, daysAgo, renderStars, STATUS_LABELS, resolveImageUrl, getPlaceholderImage } from '../utils/helpers';
 import api from '../utils/api';
 import {
-  ArrowLeft, Share2, Heart, Star, MapPin, Clock, Edit2, Bed, Bath, Ruler, Eye, CheckCircle, Phone, MessageCircle, Star as StarIcon,
+  ArrowLeft, Share2, Heart, Star, MapPin, Clock, Edit2, Bed, Bath, Ruler, Eye, CheckCircle, Phone, MessageCircle,
   Calendar, CreditCard, TrendingUp, Users, Home, Building2, Briefcase, Tag, Sparkles, ChevronLeft, ChevronRight, Crown, Shield,
   AlertCircle, X, Menu, LogOut, Settings, HelpCircle, Mail, Globe, Facebook, Twitter, Instagram, Linkedin, Youtube, Github,
   ArrowRight, ArrowUp, ArrowDown, ChevronUp, ChevronDown, DollarSign, Percent, Award, Zap, ThumbsUp, ThumbsDown, Flag, Bookmark,
@@ -17,8 +17,8 @@ import {
   Truck, Clock as ClockIcon, Map, Navigation, Compass, LocateFixed, Volume2, VolumeX, Play, Pause, Maximize, Minimize, Sun, Moon,
   Laptop, Battery, Wifi, Bluetooth, Coffee, Music, Film, Image, Video, Camera, Mic, Headphones, PhoneCall, MailOpen, Inbox, Send,
   Archive, Folder, File, FileText, FileImage, FileVideo, FileAudio, DownloadCloud, UploadCloud, Cloud, CloudRain, CloudSnow, Wind,
-  Droplet, Thermometer, Activity, HeartPulse, Stethoscope, Syringe, Pill, Hospital, Ambulance, Flame, Zap as ZapIcon, Circle, Square,Lock, Info,
-  Triangle, Hexagon, Pentagon, Octagon, ThumbsUp as ThumbsUpIcon, ThumbsDown as ThumbsDownIcon
+  Droplet, Thermometer, Activity, HeartPulse, Stethoscope, Syringe, Pill, Hospital, Ambulance, Flame, Zap as ZapIcon, Circle, Square,
+  Triangle, Hexagon, Pentagon, Octagon, ThumbsUp as ThumbsUpIcon, ThumbsDown as ThumbsDownIcon, Lock, Info
 } from 'lucide-react';
 
 const PropertyMap = lazy(() => import('../components/common/PropertyMap'));
@@ -381,7 +381,7 @@ export default function PropertyDetail() {
             <Heart className={`w-5 h-5 transition-all ${isFav ? 'stroke-white fill-white' : 'stroke-ink fill-transparent'}`} />
           </button>
         </div>
-        <div className="absolute bottom-3 left-3 flex gap-2 z-10">
+        <div className="absolute bottom-3 left-3 flex gap-2 z-10 flex-wrap">
           {p.is_premium === 1 && <div className="badge badge-gold shadow-gold flex items-center gap-1"><Star className="w-3 h-3 fill-current" /> Premium</div>}
           <div className={`badge ${propStatus.color} flex items-center gap-1`}>{propStatus.icon} {propStatus.label}</div>
           {p.owner_verified && <div className="badge bg-blue-50 text-blue-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Verified Owner</div>}
@@ -548,11 +548,10 @@ export default function PropertyDetail() {
           </div>
         )}
 
-        {/* OWNER CARD - FIXED FOR DESKTOP */}
+        {/* OWNER CARD */}
         <div className="mb-5">
           <h2 className="text-sm font-bold text-ink mb-2">Wasiliana Na</h2>
           <div className="bg-white rounded-xl p-4 shadow-soft border border-surface-4">
-            {/* Owner Info Row */}
             <div className="flex flex-col sm:flex-row sm:items-start gap-3">
               <div className="flex items-start gap-3 flex-1">
                 <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-primary-50">
@@ -577,7 +576,6 @@ export default function PropertyDetail() {
                   </div>
                 </div>
               </div>
-              {/* Action Buttons - side by side on desktop */}
               <div className="flex flex-row gap-2 flex-shrink-0 mt-3 sm:mt-0">
                 <button onClick={openChat}
                   className="flex items-center gap-1 bg-primary text-white px-3 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all shadow-green"
@@ -592,7 +590,6 @@ export default function PropertyDetail() {
               </div>
             </div>
 
-            {/* Rate button - full width below */}
             {user && !isOwnProperty && (
               <button onClick={() => setShowRatingModal(true)}
                 className="w-full mt-3 py-2 border border-gold bg-gold-50 text-gold-600 rounded-lg text-xs font-bold active:scale-[.98] transition-all flex items-center justify-center gap-1"
@@ -601,7 +598,6 @@ export default function PropertyDetail() {
               </button>
             )}
 
-            {/* Owner reviews preview */}
             {ownerReviews.length > 0 && (
               <div className="mt-3 pt-2 border-t border-surface-4">
                 <p className="text-2xs font-semibold text-ink-4 mb-1">Maoni:</p>
@@ -682,8 +678,7 @@ export default function PropertyDetail() {
             <MessageCircle className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Wasiliana</span>
           </button>
-          <button
-            onClick={openBookingModal}
+          <button onClick={openBookingModal}
             className="flex-1 py-2.5 bg-gold text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
           >
             <Calendar className="w-4 h-4" />
