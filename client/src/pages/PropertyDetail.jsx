@@ -8,6 +8,19 @@ import { RatingModal } from '../components/common/RatingModal';
 import { LoginPromptModal } from '../components/common/LoginPromptModal';
 import { formatPrice, getAvatar, daysAgo, renderStars, STATUS_LABELS, resolveImageUrl, getPlaceholderImage } from '../utils/helpers';
 import api from '../utils/api';
+import {
+  ArrowLeft, Share2, Heart, Star, MapPin, Clock, Edit2, Bed, Bath, Ruler, Eye, CheckCircle, Phone, MessageCircle, Star as StarIcon,
+  Calendar, CreditCard, TrendingUp, Users, Home, Building2, Briefcase, Tag, Sparkles, ChevronLeft, ChevronRight, Crown, Shield,
+  AlertCircle, X, Menu, LogOut, Settings, HelpCircle, Mail, Globe, Facebook, Twitter, Instagram, Linkedin, Youtube, Github,
+  ArrowRight, ArrowUp, ArrowDown, ChevronUp, ChevronDown, DollarSign, Percent, Award, Zap, ThumbsUp, ThumbsDown, Flag, Bookmark,
+  Share2 as ShareIcon, Copy, ExternalLink, Download, Upload, Trash2, Edit, Save, PlusCircle, MinusCircle, ShoppingCart, Package,
+  Truck, Clock as ClockIcon, Map, Navigation, Compass, LocateFixed, Volume2, VolumeX, Play, Pause, Maximize, Minimize, Sun, Moon,
+  Laptop, Battery, Wifi, Bluetooth, Coffee, Music, Film, Image, Video, Camera, Mic, Headphones, PhoneCall, MailOpen, Inbox, Send,
+  Archive, Folder, File, FileText, FileImage, FileVideo, FileAudio, DownloadCloud, UploadCloud, Cloud, CloudRain, CloudSnow, Wind,
+  Droplet, Thermometer, Activity, HeartPulse, Stethoscope, Syringe, Pill, Hospital, Ambulance, Flame, Zap as ZapIcon, Circle, Square,Lock, Info,
+  Triangle, Hexagon, Pentagon, Octagon, ThumbsUp as ThumbsUpIcon, ThumbsDown as ThumbsDownIcon
+} from 'lucide-react';
+
 const PropertyMap = lazy(() => import('../components/common/PropertyMap'));
 
 // Intent keys for localStorage
@@ -354,37 +367,28 @@ export default function PropertyDetail() {
         <button onClick={() => navigate(-1)} aria-label="Rudi"
           className="absolute top-4 left-4 w-10 h-10 glass rounded-full flex items-center justify-center shadow-soft active:scale-90 transition-all z-10"
         >
-          <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-ink" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
+          <ArrowLeft className="w-5 h-5 stroke-ink" />
         </button>
         <div className="absolute top-4 right-4 flex gap-2 z-10">
           <button onClick={() => { navigator.share?.({ title: p.title, url: window.location.href }) || toast('Link imenakiliwa', 'success'); }}
             className="w-10 h-10 glass rounded-full flex items-center justify-center shadow-soft active:scale-90"
           >
-            <svg viewBox="0 0 24 24" className="w-4 h-4 stroke-ink" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-            </svg>
+            <Share2 className="w-4 h-4 stroke-ink" />
           </button>
           <button onClick={toggleFav} aria-label="Hifadhi"
             className={`w-10 h-10 rounded-full flex items-center justify-center shadow-soft active:scale-90 transition-all ${isFav ? 'bg-red-500' : 'glass'}`}
           >
-            <svg viewBox="0 0 24 24" className={`w-5 h-5 transition-all ${isFav ? 'stroke-white fill-white' : 'stroke-ink fill-transparent'}`}
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
+            <Heart className={`w-5 h-5 transition-all ${isFav ? 'stroke-white fill-white' : 'stroke-ink fill-transparent'}`} />
           </button>
         </div>
         <div className="absolute bottom-3 left-3 flex gap-2 z-10">
-          {p.is_premium === 1 && <div className="badge badge-gold shadow-gold">⭐ Premium</div>}
-          <div className={`badge ${propStatus.color}`}>{propStatus.icon} {propStatus.label}</div>
-          {p.owner_verified && <div className="badge bg-blue-50 text-blue-700">✓ Verified Owner</div>}
+          {p.is_premium === 1 && <div className="badge badge-gold shadow-gold flex items-center gap-1"><Star className="w-3 h-3 fill-current" /> Premium</div>}
+          <div className={`badge ${propStatus.color} flex items-center gap-1`}>{propStatus.icon} {propStatus.label}</div>
+          {p.owner_verified && <div className="badge bg-blue-50 text-blue-700 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Verified Owner</div>}
         </div>
         {allImages.length > 1 && (
-          <div className="absolute bottom-3 right-3 glass-light text-ink text-xs font-bold px-2.5 py-1 rounded-full">
-            📷 {imgIdx + 1}/{allImages.length}
+          <div className="absolute bottom-3 right-3 glass-light text-ink text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+            <Image className="w-3 h-3" /> {imgIdx + 1}/{allImages.length}
           </div>
         )}
       </div>
@@ -422,17 +426,17 @@ export default function PropertyDetail() {
               <h1 className="text-lg md:text-xl font-bold text-ink mt-1 leading-snug">{p.title}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <p className="text-xs text-ink-5 flex items-center gap-0.5">
-                  <span className="text-primary">📍</span>{p.area}, {p.city}
+                  <MapPin className="w-3 h-3 text-primary" /> {p.area}, {p.city}
                 </p>
                 <span className="text-ink-6 text-2xs">•</span>
                 <p className="text-2xs text-ink-5 flex items-center gap-0.5">
-                  <span>🕐</span> Imechapishwa {daysSinceUpload}
+                  <Clock className="w-3 h-3" /> Imechapishwa {daysSinceUpload}
                 </p>
                 {p.latitude && p.longitude && (
                   <>
                     <span className="text-ink-6 text-2xs">•</span>
                     <button onClick={openGoogleMaps} className="text-2xs text-primary hover:underline flex items-center gap-0.5">
-                      <span>🗺️</span> Ramani
+                      <MapPin className="w-3 h-3" /> Ramani
                     </button>
                   </>
                 )}
@@ -443,7 +447,7 @@ export default function PropertyDetail() {
                 onClick={() => navigate(`/add?edit=${p.id}`)}
                 className="flex items-center gap-1 px-2 py-1.5 bg-primary-50 text-primary rounded-lg text-xs font-bold
                   hover:bg-primary hover:text-white active:scale-95 transition-all flex-shrink-0">
-                ✏️ Hariri
+                <Edit2 className="w-3 h-3" /> Hariri
               </button>
             )}
           </div>
@@ -453,27 +457,27 @@ export default function PropertyDetail() {
         <div className="grid grid-cols-4 gap-2 mb-5">
           {p.bedrooms > 0 && (
             <div className="bg-white rounded-xl py-2 text-center shadow-soft border border-surface-4">
-              <div className="text-base mb-0.5">🛏</div>
+              <Bed className="w-4 h-4 mx-auto mb-0.5 text-ink-4" />
               <div className="text-sm font-extrabold text-ink">{p.bedrooms}</div>
               <div className="text-2xs text-ink-5 font-medium">Vyumba</div>
             </div>
           )}
           {p.bathrooms > 0 && (
             <div className="bg-white rounded-xl py-2 text-center shadow-soft border border-surface-4">
-              <div className="text-base mb-0.5">🚿</div>
+              <Bath className="w-4 h-4 mx-auto mb-0.5 text-ink-4" />
               <div className="text-sm font-extrabold text-ink">{p.bathrooms}</div>
               <div className="text-2xs text-ink-5 font-medium">Bafu</div>
             </div>
           )}
           {p.size_sqm > 0 && (
             <div className="bg-white rounded-xl py-2 text-center shadow-soft border border-surface-4">
-              <div className="text-base mb-0.5">📐</div>
+              <Ruler className="w-4 h-4 mx-auto mb-0.5 text-ink-4" />
               <div className="text-sm font-extrabold text-ink">{p.size_sqm}</div>
               <div className="text-2xs text-ink-5 font-medium">m²</div>
             </div>
           )}
           <div className="bg-white rounded-xl py-2 text-center shadow-soft border border-surface-4">
-            <div className="text-base mb-0.5">👁</div>
+            <Eye className="w-4 h-4 mx-auto mb-0.5 text-ink-4" />
             <div className="text-sm font-extrabold text-ink">{p.views}</div>
             <div className="text-2xs text-ink-5 font-medium">Maoni</div>
           </div>
@@ -488,7 +492,7 @@ export default function PropertyDetail() {
         {/* Amenities */}
         {p.amenities?.length > 0 && (
           <div className="mb-5">
-            <h2 className="text-sm font-bold text-ink mb-2">✅ Huduma Zilizopo</h2>
+            <h2 className="text-sm font-bold text-ink mb-2 flex items-center gap-1"><CheckCircle className="w-4 h-4" /> Huduma Zilizopo</h2>
             <div className="flex flex-wrap gap-1.5">
               {p.amenities.slice(0, 8).map(a => (
                 <span key={a} className="badge badge-primary text-2xs">{a}</span>
@@ -502,13 +506,13 @@ export default function PropertyDetail() {
 
         {/* MAP SECTION */}
         <div className="mb-5">
-          <h2 className="text-sm font-bold text-ink mb-2">🗺️ Mahali pa Mali</h2>
+          <h2 className="text-sm font-bold text-ink mb-2 flex items-center gap-1"><MapPin className="w-4 h-4" /> Mahali pa Mali</h2>
           <Suspense fallback={<div className="h-48 bg-surface-3 rounded-xl animate-pulse"/>}>
             <PropertyMap lat={p.latitude} lng={p.longitude} title={p.title} height="200px"/>
           </Suspense>
           {(p.latitude && p.longitude) && (
             <button onClick={openGoogleMaps} className="mt-2 text-2xs text-primary hover:underline flex items-center gap-1">
-              📍 Fungua Google Maps →
+              <MapPin className="w-3 h-3" /> Fungua Google Maps →
             </button>
           )}
         </div>
@@ -516,7 +520,7 @@ export default function PropertyDetail() {
         {/* VIDEO SECTION */}
         {p.video_url && (
           <div className="mb-5">
-            <h2 className="text-sm font-bold text-ink mb-2">🎬 Video ya Mali</h2>
+            <h2 className="text-sm font-bold text-ink mb-2 flex items-center gap-1"><Video className="w-4 h-4" /> Video ya Mali</h2>
             <div className="bg-black rounded-xl overflow-hidden shadow-soft">
               {(p.video_url.includes('youtube.com') || p.video_url.includes('youtu.be') || p.video_url.includes('vimeo.com')) ? (
                 <iframe
@@ -557,11 +561,12 @@ export default function PropertyDetail() {
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sm text-ink flex items-center gap-1.5 flex-wrap">
                     {p.owner_name}
-                    {p.owner_verified && <span className="badge badge-primary text-2xs">✓ Amethibitishwa</span>}
-                    {p.owner_plan === 'pro' && <span className="badge badge-gold text-2xs">⭐ Pro</span>}
+                    {p.owner_verified && <span className="badge badge-primary text-2xs flex items-center gap-0.5"><CheckCircle className="w-2.5 h-2.5" /> Amethibitishwa</span>}
+                    {p.owner_plan === 'pro' && <span className="badge badge-gold text-2xs flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-current" /> Pro</span>}
                   </div>
-                  <div className="text-2xs text-ink-5 mt-0.5">
-                    {p.owner_role === 'agent' ? '🧑‍💼 Dalali' : '🏠 Mwenye Nyumba'}
+                  <div className="text-2xs text-ink-5 mt-0.5 flex items-center gap-1">
+                    {p.owner_role === 'agent' ? <Briefcase className="w-3 h-3" /> : <Home className="w-3 h-3" />}
+                    {p.owner_role === 'agent' ? 'Dalali' : 'Mwenye Nyumba'}
                   </div>
                   <div className="flex items-center gap-1 mt-1">
                     {renderStars(Math.round(ownerRating || 0), 'xs')}
@@ -577,12 +582,12 @@ export default function PropertyDetail() {
                 <button onClick={openChat}
                   className="flex items-center gap-1 bg-primary text-white px-3 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all shadow-green"
                 >
-                  💬 Chat
+                  <MessageCircle className="w-3.5 h-3.5" /> Chat
                 </button>
                 <button onClick={handleCall}
                   className="flex items-center gap-1 bg-white border border-primary text-primary px-3 py-2 rounded-lg text-xs font-bold active:scale-95 transition-all"
                 >
-                  📞 Piga
+                  <Phone className="w-3.5 h-3.5" /> Piga
                 </button>
               </div>
             </div>
@@ -592,7 +597,7 @@ export default function PropertyDetail() {
               <button onClick={() => setShowRatingModal(true)}
                 className="w-full mt-3 py-2 border border-gold bg-gold-50 text-gold-600 rounded-lg text-xs font-bold active:scale-[.98] transition-all flex items-center justify-center gap-1"
               >
-                ⭐ Kadiria {p.owner_role === 'agent' ? 'Dalali' : 'Mwenye Nyumba'}
+                <Star className="w-3.5 h-3.5" /> Kadiria {p.owner_role === 'agent' ? 'Dalali' : 'Mwenye Nyumba'}
               </button>
             )}
 
@@ -611,7 +616,7 @@ export default function PropertyDetail() {
 
             {user && isOwnProperty && (
               <div className="mt-3 text-center text-2xs text-blue-600 bg-blue-50 py-1.5 rounded-lg">
-                ℹ️ Tangazo lako
+                <Info className="w-3 h-3 inline mr-1" /> Tangazo lako
               </div>
             )}
 
@@ -622,7 +627,7 @@ export default function PropertyDetail() {
               }}
                 className="w-full mt-3 py-2 bg-surface border border-surface-4 text-ink-4 rounded-lg text-xs font-semibold active:scale-[.98] transition-all"
               >
-                🔑 Ingia kutoa tathmini
+                <Lock className="w-3 h-3 inline mr-1" /> Ingia kutoa tathmini
               </button>
             )}
           </div>
@@ -631,7 +636,7 @@ export default function PropertyDetail() {
         {/* PROPERTY REVIEWS */}
         {p.reviews?.length > 0 && (
           <div className="mb-5">
-            <h2 className="text-sm font-bold text-ink mb-2">⭐ Maoni ya Wateja</h2>
+            <h2 className="text-sm font-bold text-ink mb-2 flex items-center gap-1"><Star className="w-4 h-4" /> Maoni ya Wateja</h2>
             <div className="bg-white rounded-xl p-3 shadow-soft border border-surface-4">
               <div className="flex items-center gap-3">
                 <div className="text-center">
@@ -674,24 +679,24 @@ export default function PropertyDetail() {
           <button onClick={openChat}
             className="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
           >
-            <span className="text-base">💬</span>
+            <MessageCircle className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Wasiliana</span>
           </button>
           <button
             onClick={openBookingModal}
             className="flex-1 py-2.5 bg-gold text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-md flex items-center justify-center gap-1.5"
           >
-            <span className="text-base">📅</span>
+            <Calendar className="w-4 h-4" />
             <span className="text-xs sm:text-sm">Book</span>
           </button>
           <button onClick={toggleFav}
-            className={`w-14 py-2.5 rounded-xl font-bold text-base flex items-center justify-center gap-1 active:scale-95 transition-all shadow-md ${
+            className={`w-14 py-2.5 rounded-xl font-bold text-base flex items-center justify-center active:scale-95 transition-all shadow-md ${
               isFav 
                 ? 'bg-red-500 text-white border-0' 
                 : 'bg-white border-2 border-gray-300 text-gray-500'
             }`}
           >
-            <span>{isFav ? '❤️' : '🤍'}</span>
+            <Heart className={`w-5 h-5 ${isFav ? 'fill-white' : ''}`} />
           </button>
         </div>
       </div>
