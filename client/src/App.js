@@ -9,7 +9,7 @@ import { usePushNotifications } from './hooks/usePushNotifications';
 
 // Pages
 import Auth from './pages/Auth';
-import Home from './pages/Home';
+import HomePage from './pages/HomePage';
 import Search from './pages/Search';
 import PropertyDetail from './pages/PropertyDetail';
 import Chat from './pages/Chat';
@@ -80,7 +80,7 @@ const Shell = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Shell><Home /></Shell>} />
+      <Route path="/" element={<Shell><HomePage /></Shell>} />
       <Route path="/search" element={<Shell><Search /></Shell>} />
       <Route path="/property/:id" element={<Shell><PropertyDetail /></Shell>} />
       <Route path="/help" element={<Shell><HelpCenter /></Shell>} />
