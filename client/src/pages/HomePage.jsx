@@ -242,7 +242,7 @@ const RecentMarquee = ({ items }) => {
   );
 };
 
-export default function Home() {
+export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
